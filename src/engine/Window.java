@@ -82,7 +82,7 @@ public class Window {
         GL.createCapabilities();
 
         //Set clear color
-        glClearColor(0.4f, 0.7f, 1.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     //Other Methods

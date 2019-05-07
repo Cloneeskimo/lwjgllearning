@@ -10,12 +10,14 @@ layout (location=0) in vec3 position;
 layout (location=1) in vec3 inColor; //processed by fragment shader, so will just be passed through
 out vec3 exColor;
 
-uniform mat4 projection; //uniforms are global GLSL variables
+//uniforms are global GLSL variables
+uniform mat4 projection; //projection matrix
+uniform mat4 world;      //world matrix
 
 void main()
 {
     //In this very basic shader, we are just returning the received position
     //with no transformations applied.
-    gl_Position = projection * vec4(position, 1.0); //vec4 because some advanced operations require a fourth dimension
+    gl_Position = projection * world * vec4(position, 1.0); //vec4 because some advanced operations require a fourth dimension
     exColor = inColor;
 }

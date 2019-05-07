@@ -92,4 +92,24 @@ public class Mesh {
         glBindVertexArray(0); //first make sure isn't bound
         glDeleteVertexArrays(vaoID); //delete
     }
+
+    public void render() {
+
+        //Bind to the VAO
+        glBindVertexArray(getVaoID());
+        glEnableVertexAttribArray(0); //enable our position vbo at index 0 in the vao
+        glEnableVertexAttribArray(1); //enable our color vbo at index 1 in the vao
+
+        //Draw Mesh
+        //(@mode) - specifies the primitives for rendering, triangles in this case.
+        //(@count) - specifies the number of elements to be rendered.
+        //(@type) - specifies the type of value in the indices data, integers in this case
+        //(@indicies) - specifies the offset to apply to the indices data to start rendering
+        glDrawElements(GL_TRIANGLES, getVertexCount(), GL_UNSIGNED_INT, 0);
+
+        //Restore state (unbind)
+        glDisableVertexAttribArray(0); //disable our position vbo at index 0 in the vao
+        glDisableVertexAttribArray(1); //disable our color vbo at index 1 in the vao
+        glBindVertexArray(0);
+    }
 }

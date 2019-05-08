@@ -2,6 +2,9 @@ package engine.graphics;
 
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
@@ -13,20 +16,24 @@ public class Mesh {
 
     //Data
     private final int vaoID;
-    private final int posVboID, colorVboID, idxVboID;
+    private final List<Integer> vboIDs;
     private final int vertexCount;
+    private final Texture texture;
 
     //Constructor
     //PRE-REQ: positions must follow standard array protocol, must have its count
     //equal to its length, must be divisible by 3 (processed as triangles)
-    public Mesh(float[] positions, float[] colors, int[] indices) {
+    public Mesh(float[] positions, float[] textureCoords, int[] indices, Texture texture) {
         FloatBuffer posBuffer = null;
-        FloatBuffer colorBuffer = null;
+        FloatBuffer textureCoordsBuffer = null;
         IntBuffer idxBuffer = null;
         try {
+            //Set texture
+            this.texture = texture;
 
             //Set vertex count
             vertexCount = indices.length; //assumes triangles
+            this.vboIDs = new ArrayList();
 
             //Create and bind VAO
             vaoID = glGenVertexArrays();
@@ -37,28 +44,31 @@ public class Mesh {
             posBuffer.put(positions).flip();
 
             //Position VBO creation, data storage
-            posVboID = glGenBuffers();
-            glBindBuffer(GL_ARRAY_BUFFER, posVboID);
+            int vbo = glGenBuffers();
+            this.vboIDs.add(vbo);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBufferData(GL_ARRAY_BUFFER, posBuffer, GL_STATIC_DRAW); //put vertices in VBO
             glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0); //put vbo in vao
 
-            //Color VBO Buffer
-            colorBuffer = MemoryUtil.memAllocFloat(colors.length);
-            colorBuffer.put(colors).flip();
+            //Texture VBO Buffer
+            textureCoordsBuffer = MemoryUtil.memAllocFloat(textureCoords.length);
+            textureCoordsBuffer.put(textureCoords).flip();
 
-            //Color VBO creation, data storage
-            colorVboID = glGenBuffers();
-            glBindBuffer(GL_ARRAY_BUFFER, colorVboID);
-            glBufferData(GL_ARRAY_BUFFER, colorBuffer, GL_STATIC_DRAW);
-            glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
+            //Texture VBO creation, data storage
+            vbo = glGenBuffers();
+            this.vboIDs.add(vbo);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, textureCoordsBuffer, GL_STATIC_DRAW);
+            glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0); //(2 components - x, y)
 
             //Index VBO Buffer
             idxBuffer = MemoryUtil.memAllocInt(indices.length);
             idxBuffer.put(indices).flip();
 
             //Index VBO creation, data storage
-            idxVboID = glGenBuffers();
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idxVboID);
+            vbo = glGenBuffers();
+            this.vboIDs.add(vbo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, idxBuffer, GL_STATIC_DRAW);
 
             //Unbind VBO, VAO
@@ -69,7 +79,7 @@ public class Mesh {
 
             //Free buffer memory
             if (posBuffer != null) MemoryUtil.memFree(posBuffer);
-            if (colorBuffer != null) MemoryUtil.memFree(colorBuffer);
+            if (textureCoordsBuffer != null) MemoryUtil.memFree(textureCoordsBuffer);
             if (idxBuffer != null) MemoryUtil.memFree(idxBuffer);
         }
     }
@@ -86,14 +96,15 @@ public class Mesh {
 
         //Delete VBO, VAO
         glBindBuffer(GL_ARRAY_BUFFER, 0); //first make sure isn't bound
-        glDeleteBuffers(posVboID); //delete position vbo
-        glDeleteBuffers(idxVboID); //delete index vbo
-        glDeleteBuffers(colorVboID); //delete color vbo
+        for (int vbo : this.vboIDs) glDeleteBuffers(vbo);
         glBindVertexArray(0); //first make sure isn't bound
         glDeleteVertexArrays(vaoID); //delete
     }
 
     public void render() {
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture.getID());
 
         //Bind to the VAO
         glBindVertexArray(getVaoID());

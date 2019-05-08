@@ -4,6 +4,7 @@ import engine.GameItem;
 import engine.IGameLogic;
 import engine.Window;
 import engine.graphics.Mesh;
+import engine.graphics.Texture;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 
@@ -30,21 +31,95 @@ public class Game implements IGameLogic {
         //initialize renderer
         this.renderer.init(window);
 
+        //coral pink
+        //umber orange
+        //yellow-orange
+        //sap green
+        //dark blue (navy but not too navy)
+        //burnt red (but not brown)
+        //pastel green
+        //baby blue
+
         //create mesh
-        float[] positions = new float[] { //rectangle
-            -0.5f,  0.5f,  -1.05f,
-            -0.5f, -0.5f,  -1.05f,
-             0.5f, -0.5f,  -1.05f,
-             0.5f,  0.5f,  -1.05f
+        float[] positions = new float[] { //vertices
+
+            //Original Vertices
+            -0.5f,  0.5f,  0.5f,    //V0
+            -0.5f, -0.5f,  0.5f,    //V1
+             0.5f, -0.5f,  0.5f,    //V2
+             0.5f,  0.5f,  0.5f,    //V3
+            -0.5f,  0.5f, -0.5f,    //V4
+             0.5f,  0.5f, -0.5f,    //V5
+            -0.5f, -0.5f, -0.5f,    //V6
+             0.5f, -0.5f, -0.5f,    //V7
+
+            //Repeat some for texture coordinates on top
+            -0.5f,  0.5f, -0.5f, //V8 - V4 repeated
+             0.5f,  0.5f, -0.5f, //V9 - V5 repeated
+            -0.5f,  0.5f,  0.5f, //V10 - V0 repeated
+             0.5f,  0.5f,  0.5f, //V11 - V3 repeated
+
+            //Repeat some for texture coordinates on right
+             0.5f,  0.5f,  0.5f,
+             0.5f, -0.5f,  0.5f,
+
+            //Repeat some for texture coordinates on left
+            -0.5f,  0.5f,  0.5f,
+            -0.5f, -0.5f,  0.5f,
+
+            //Repeat some for texture coordinates on bottom
+            -0.5f, -0.5f, -0.5f,
+             0.5f, -0.5f, -0.5f,
+            -0.5f, -0.5f,  0.5f,
+             0.5f, -0.5f,  0.5f
         };
-        float[] colors = new float[] { //colors
-            0.5f, 0.0f, 0.0f,
-            0.0f, 0.5f, 0.0f,
-            0.0f, 0.0f, 0.5f,
-            0.0f, 0.5f, 0.5f,
+        float[] textureCoordinates = new float[] { //texture coordinates
+            0.0f, 0.0f,
+            0.0f, 0.5f,
+            0.5f, 0.5f,
+            0.5f, 0.0f,
+
+            0.0f, 0.0f,
+            0.5f, 0.0f,
+            0.0f, 0.5f,
+            0.5f, 0.5f,
+
+            // For text coords in top face
+            0.0f, 0.5f,
+            0.5f, 0.5f,
+            0.0f, 1.0f,
+            0.5f, 1.0f,
+
+            // For text coords in right face
+            0.0f, 0.0f,
+            0.0f, 0.5f,
+
+            // For text coords in left face
+            0.5f, 0.0f,
+            0.5f, 0.5f,
+
+            // For text coords in bottom face
+            0.5f, 0.0f,
+            1.0f, 0.0f,
+            0.5f, 0.5f,
+            1.0f, 0.5f
         };
-        int[] indices = new int[] { 0, 1, 3, 3, 1, 2 }; //indices for element drawing
-        GameItem gameItem = new GameItem(new Mesh(positions, colors, indices));
+        int[] indices = new int[] { //indices
+            // Front face
+            0, 1, 3, 3, 1, 2,
+            // Top Face
+            8, 10, 11, 9, 8, 11,
+            // Right face
+            12, 13, 7, 5, 12, 7,
+            // Left face
+            14, 15, 6, 4, 14, 6,
+            // Bottom face
+            16, 18, 19, 17, 16, 19,
+            // Back face
+            4, 6, 7, 5, 4, 7
+        };
+        Texture texture = new Texture("/textures/grass.png");
+        GameItem gameItem = new GameItem(new Mesh(positions, textureCoordinates, indices, texture));
         gameItem.setPosition(0, 0, -2);
         gameItems = new GameItem[] { gameItem };
     }
@@ -87,7 +162,7 @@ public class Game implements IGameLogic {
             //update rotation angle
             float rotation = gameItem.getRotation().z + 1.5f;
             if (rotation > 360) rotation = 0;
-            gameItem.setRotation(0, 0, rotation);
+            gameItem.setRotation(rotation, rotation, rotation);
         }
     }
 

@@ -6,7 +6,7 @@
 
     <groupId>com.jacoboaks</groupId>
     <artifactId>lwjgllearning</artifactId>
-    <version>1.0</version>
+    <version>c7</version>
     <build>
         <plugins>
             <plugin>
@@ -22,16 +22,12 @@
 
     <properties>
         <lwjgl.version>3.2.1</lwjgl.version>
-        <lwjgl.natives>natives-macos</lwjgl.natives>
+        <native.target>natives-macos</native.target>
         <joml.version>1.9.6</joml.version>
+        <pngdecoder.version>1.0</pngdecoder.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.joml</groupId>
-            <artifactId>joml</artifactId>
-            <version>${joml.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.lwjgl</groupId>
             <artifactId>lwjgl</artifactId>
@@ -46,6 +42,16 @@
             <groupId>org.lwjgl</groupId>
             <artifactId>lwjgl-opengl</artifactId>
             <version>${lwjgl.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-stb</artifactId>
+            <version>${lwjgl.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.joml</groupId>
+            <artifactId>joml</artifactId>
+            <version>${joml.version}</version>
         </dependency>
 
         <!-- Natives -->
@@ -53,21 +59,28 @@
             <groupId>org.lwjgl</groupId>
             <artifactId>lwjgl</artifactId>
             <version>${lwjgl.version}</version>
-            <classifier>${lwjgl.natives}</classifier>
+            <classifier>${native.target}</classifier>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.lwjgl</groupId>
             <artifactId>lwjgl-glfw</artifactId>
             <version>${lwjgl.version}</version>
-            <classifier>${lwjgl.natives}</classifier>
+            <classifier>${native.target}</classifier>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.lwjgl</groupId>
             <artifactId>lwjgl-opengl</artifactId>
             <version>${lwjgl.version}</version>
-            <classifier>${lwjgl.natives}</classifier>
+            <classifier>${native.target}</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-stb</artifactId>
+            <version>${lwjgl.version}</version>
+            <classifier>${native.target}</classifier>
             <scope>runtime</scope>
         </dependency>
     </dependencies>

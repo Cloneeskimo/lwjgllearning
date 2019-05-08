@@ -83,6 +83,8 @@ public class ShaderProgram {
         }
     }
 
+    public void setUniform(String uniformName, int value) { glUniform1i(uniforms.get(uniformName), value); }
+
     //Binding/Unbinding
     public void bind() { glUseProgram(programId); } //activate this program for rendering
     public void unbind() { glUseProgram(0); } //deactivate this program for rendering

@@ -37,6 +37,7 @@ public class Renderer {
         //Create Projection Matrix
         shaderProgram.createUniform("projection");
         shaderProgram.createUniform("world");
+        shaderProgram.createUniform("textureSampler");
     }
 
     //Other Methods
@@ -57,6 +58,9 @@ public class Renderer {
 
         //bind shader program
         shaderProgram.bind();
+
+        //set the texture sampler to 0, in texture unit 0 of the graphics card
+        shaderProgram.setUniform("textureSampler", 0);
 
         //projection transformation (same for each GameItem)
         //we update this every render call to allow for resizing

@@ -3,6 +3,7 @@ package game;
 import engine.GameItem;
 import engine.Utils;
 import engine.Window;
+import engine.graphics.Camera;
 import engine.graphics.Mesh;
 import engine.graphics.ShaderProgram;
 import engine.graphics.Transformation;
@@ -36,7 +37,7 @@ public class Renderer {
 
         //Create Projection Matrix
         shaderProgram.createUniform("projection");
-        shaderProgram.createUniform("world");
+        shaderProgram.createUniform("modelView");
         shaderProgram.createUniform("textureSampler");
     }
 
@@ -45,7 +46,7 @@ public class Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    public void render(Window window, GameItem[] gameItems) {
+    public void render(Window window, Camera camera, GameItem[] gameItems) {
 
         //clear
         clear();
@@ -67,10 +68,13 @@ public class Renderer {
         Matrix4f projectionMatrix = transformation.getProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
         shaderProgram.setUniform("projection", projectionMatrix);
 
+        //view transformation (same for each GameItem, changes depending on camera)
+        Matrix4f viewMatrix = transformation.getViewMatrix(camera);
+
         //world transformation (different for each GameItem)
         for (GameItem gameItem : gameItems) {
-            Matrix4f worldMatrix = transformation.getWorldMatrix(gameItem.getPosition(), gameItem.getRotation(), gameItem.getScale());
-            shaderProgram.setUniform("world", worldMatrix);
+            Matrix4f modelViewMatrix = transformation.getModelViewMatrix(gameItem, viewMatrix);
+            shaderProgram.setUniform("modelView", modelViewMatrix);
 
             gameItem.getMesh().render();
         }

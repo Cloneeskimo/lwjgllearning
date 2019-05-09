@@ -12,12 +12,12 @@ out vec2 textureCoordsOut;
 
 //uniforms are global GLSL variables
 uniform mat4 projection; //projection matrix
-uniform mat4 world;      //world matrix
+uniform mat4 modelView;  //model view matrix (world and view)
 
 void main()
 {
     //In this very basic shader, we are just returning the received position
     //with no transformations applied.
-    gl_Position = projection * world * vec4(position, 1.0); //vec4 because some advanced operations require a fourth dimension
+    gl_Position = projection * modelView * vec4(position, 1.0); //vec4 because some advanced operations require a fourth dimension
     textureCoordsOut = textureCoords;
 }

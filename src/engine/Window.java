@@ -96,10 +96,11 @@ public class Window {
     public boolean isvSync() { return this.vSync; }
     public boolean isKeyPressed(int keyCode) { return glfwGetKey(this.windowHandle, keyCode) == GLFW_PRESS; }
     public boolean shouldClose() { return glfwWindowShouldClose(this.windowHandle); }
-    public String getTitle() { return this.title; }
+    public boolean isResized() { return this.resized; }
+    public long getWindowHandle() { return this.windowHandle; }
     public int getWidth() { return this.width; }
     public int getHeight() { return this.height; }
-    public boolean isResized() { return this.resized; }
+    public String getTitle() { return this.title; }
 
     //Mutators
     public void setClearColor(float r, float g, float b, float a) { glClearColor(r, g, b, a); }

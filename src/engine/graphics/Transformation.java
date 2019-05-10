@@ -60,6 +60,7 @@ public class Transformation {
         this.modelView.rotateX((float)Math.toRadians(-gameItemRotation.x));
         this.modelView.rotateY((float)Math.toRadians(-gameItemRotation.y));
         this.modelView.rotateZ((float)Math.toRadians(-gameItemRotation.z));
+        this.modelView.scale(gameItem.getScale());
 
         //View Matrix
         Matrix4f viewCurr = new Matrix4f(viewMatrix);

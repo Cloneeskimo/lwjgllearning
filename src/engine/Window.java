@@ -10,6 +10,9 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class Window {
 
+    //Statics
+    public static boolean MOUSE_GRABBED = false;
+
     //Data
     private final String title; //window title
     private int width; //window width
@@ -17,6 +20,7 @@ public class Window {
     private long windowHandle; //handle to GL window
     private boolean resized; //whether the window has been resized or not
     private boolean vSync; //whether to use V-Sync or not
+    private int polgyonMode = GL_FILL; //polygon mode
 
     //Constructor
     public Window(String title, int width, int height, boolean vSync) {
@@ -59,8 +63,12 @@ public class Window {
 
         //Setup a key callback. It will be called every time a key is pressed, repeated, or released
         glfwSetKeyCallback(this.windowHandle, (window, key, scancode, action, mods) -> {
-            if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE)
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) //close window
                 glfwSetWindowShouldClose(window, true); //We will detect this in the rendering loop
+            if (key == GLFW_KEY_1 && action == GLFW_RELEASE) //change polygon mode
+                this.togglePolygonMode();
+            if (key == GLFW_KEY_2 && action == GLFW_RELEASE)
+                this.toggleMouseGrab();
         });
 
         //Get the resolution of the primary monitor
@@ -90,13 +98,16 @@ public class Window {
     public void update() {
         glfwSwapBuffers(this.windowHandle);
         glfwPollEvents(); //this is where our key callback will be called from
+    }
 
-        if (this.isKeyPressed(GLFW_KEY_6)) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        }
-        if (this.isKeyPressed(GLFW_KEY_7)) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        }
+    private void togglePolygonMode() {
+        this.polgyonMode = (polgyonMode == GL_LINE ? GL_FILL : GL_LINE);
+        glPolygonMode(GL_FRONT_AND_BACK, this.polgyonMode);
+    }
+
+    private void toggleMouseGrab() {
+        Window.MOUSE_GRABBED = !Window.MOUSE_GRABBED;
+        glfwSetInputMode(this.windowHandle, GLFW_CURSOR, Window.MOUSE_GRABBED ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     }
 
     //Accessors

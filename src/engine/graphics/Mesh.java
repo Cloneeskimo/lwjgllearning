@@ -10,26 +10,30 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 
+import org.joml.Vector3f;
 import org.lwjgl.system.MemoryUtil;
 
 public class Mesh {
 
-    //Data
+    //Static Data
+    private static final Vector3f DEFAULT_COLOR = new Vector3f(1.0f, 1.0f, 1.0f);
+
+    //Instance Data
     private final int vaoID;
     private final List<Integer> vboIDs;
     private final int vertexCount;
-    private final Texture texture;
+    private Texture texture;
+    private Vector3f color;
 
     //Constructor
-    //PRE-REQ: positions must follow standard array protocol, must have its count
-    //equal to its length, must be divisible by 3 (processed as triangles)
-    public Mesh(float[] positions, float[] textureCoords, int[] indices, Texture texture) {
+    public Mesh(float[] positions, float[] textureCoords, float[] normals, int[] indices) {
         FloatBuffer posBuffer = null;
         FloatBuffer textureCoordsBuffer = null;
+        FloatBuffer normalVectorsBuffer = null;
         IntBuffer idxBuffer = null;
         try {
-            //Set texture
-            this.texture = texture;
+            //Set color to default
+            this.color = DEFAULT_COLOR;
 
             //Set vertex count
             vertexCount = indices.length; //assumes triangles
@@ -50,16 +54,27 @@ public class Mesh {
             glBufferData(GL_ARRAY_BUFFER, posBuffer, GL_STATIC_DRAW); //put vertices in VBO
             glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0); //put vbo in vao
 
-            //Texture VBO Buffer
+            //Texture Coordinates VBO Buffer
             textureCoordsBuffer = MemoryUtil.memAllocFloat(textureCoords.length);
             textureCoordsBuffer.put(textureCoords).flip();
 
-            //Texture VBO creation, data storage
+            //Texture Coordinates VBO creation, data storage
             vbo = glGenBuffers();
             this.vboIDs.add(vbo);
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBufferData(GL_ARRAY_BUFFER, textureCoordsBuffer, GL_STATIC_DRAW);
             glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0); //(2 components - x, y)
+
+            //Normal Vectors VBO Buffer
+            normalVectorsBuffer = MemoryUtil.memAllocFloat(normals.length);
+            normalVectorsBuffer.put(normals).flip();
+
+            //Normal Vectors VBO Creation, data storage
+            vbo = glGenBuffers();
+            this.vboIDs.add(vbo);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, normalVectorsBuffer, GL_STATIC_DRAW);
+            glVertexAttribPointer(2, 3, GL_FLOAT, false, 0, 0); //put in VAO
 
             //Index VBO Buffer
             idxBuffer = MemoryUtil.memAllocInt(indices.length);
@@ -80,13 +95,21 @@ public class Mesh {
             //Free buffer memory
             if (posBuffer != null) MemoryUtil.memFree(posBuffer);
             if (textureCoordsBuffer != null) MemoryUtil.memFree(textureCoordsBuffer);
+            if (normalVectorsBuffer != null) MemoryUtil.memFree(normalVectorsBuffer);
             if (idxBuffer != null) MemoryUtil.memFree(idxBuffer);
         }
     }
 
     //Accessors
+    public boolean isTextured() { return this.texture != null; }
+    public Texture getTexture() { return this.texture; }
+    public Vector3f getColor() { return this.color; }
     public int getVaoID() { return this.vaoID; }
     public int getVertexCount() { return this.vertexCount; }
+
+    //Mutators
+    public void setTexture(Texture texture) { this.texture = texture; }
+    public void setColor(Vector3f color) { this.color = color; }
 
     //Other Methods
     public void cleanup() {
@@ -99,17 +122,23 @@ public class Mesh {
         for (int vbo : this.vboIDs) glDeleteBuffers(vbo);
         glBindVertexArray(0); //first make sure isn't bound
         glDeleteVertexArrays(vaoID); //delete
+
+        //Cleanup texture
+        if (this.texture != null) texture.cleanup();
     }
 
     public void render() {
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture.getID());
+        if (this.texture != null) {
+            glActiveTexture(GL_TEXTURE0); //activate first texture bank
+            glBindTexture(GL_TEXTURE_2D, texture.getID()); //bind the texture
+        }
 
-        //Bind to the VAO
+        //Bind to the VAO and enable the vbos within
         glBindVertexArray(getVaoID());
         glEnableVertexAttribArray(0); //enable our position vbo at index 0 in the vao
-        glEnableVertexAttribArray(1); //enable our color vbo at index 1 in the vao
+        glEnableVertexAttribArray(1); //enable our texture coords vbo at index 1 in the vao
+        glEnableVertexAttribArray(2); //enable our normal vectors vbo at index 2 in the vao
 
         //Draw Mesh
         //(@mode) - specifies the primitives for rendering, triangles in this case.
@@ -120,7 +149,9 @@ public class Mesh {
 
         //Restore state (unbind)
         glDisableVertexAttribArray(0); //disable our position vbo at index 0 in the vao
-        glDisableVertexAttribArray(1); //disable our color vbo at index 1 in the vao
+        glDisableVertexAttribArray(1); //disable our texture coords vbo at index 1 in the vao
+        glDisableVertexAttribArray(2); //disable our nroaml vectors vbo at index 2 in the vao
         glBindVertexArray(0);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
 }

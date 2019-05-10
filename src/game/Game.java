@@ -6,6 +6,7 @@ import engine.MouseInput;
 import engine.Window;
 import engine.graphics.Camera;
 import engine.graphics.Mesh;
+import engine.graphics.OBJLoader;
 import engine.graphics.Texture;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -125,21 +126,22 @@ public class Game implements IGameLogic {
             // Back face
             4, 6, 7, 5, 4, 7
         };
-        Texture texture = new Texture("/textures/grass.png");
-        Mesh mesh = new Mesh(positions, textureCoordinates, indices, texture);
-        GameItem gameItem1 = new GameItem(mesh);
-        gameItem1.setScale(0.5f);
-        gameItem1.setPosition(0, 0, -2);
-        GameItem gameItem2 = new GameItem(mesh);
-        gameItem2.setScale(0.5f);
-        gameItem2.setPosition(1, 1, -2);
-        GameItem gameItem3 = new GameItem(mesh);
-        gameItem3.setScale(0.5f);
-        gameItem3.setPosition(0, 0, -3);
-        GameItem gameItem4 = new GameItem(mesh);
-        gameItem4.setScale(0.5f);
-        gameItem4.setPosition(1, 0, -3);
-        gameItems = new GameItem[] { gameItem1, gameItem2, gameItem3, gameItem4 };
+
+        //Create Grass Block
+        Mesh blockMesh = OBJLoader.loadMesh("/models/cube.obj");
+        Texture grassTexture = new Texture("/textures/grass.png");
+        blockMesh.setTexture(grassTexture);
+        GameItem block = new GameItem(blockMesh);
+        block.setScale(0.5f);
+        block.setPosition(0, 0, -2);
+
+        //Create Bunny
+        Mesh bunnyMesh = OBJLoader.loadMesh("/models/bunny.obj");
+        GameItem bunny = new GameItem(bunnyMesh);
+        bunny.setScale(0.5f);
+        bunny.setPosition(5, 0, -2);
+
+        gameItems = new GameItem[] { block, bunny };
     }
 
     @Override

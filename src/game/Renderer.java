@@ -35,10 +35,14 @@ public class Renderer {
         shaderProgram.createFragmentShader(Utils.loadResources("/shaders/fragment.glsl"));
         shaderProgram.link();
 
-        //Create Projection Matrix
+        //Create Matrix Uniforms
         shaderProgram.createUniform("projection");
         shaderProgram.createUniform("modelView");
+
+        //Create Other Uniforms
         shaderProgram.createUniform("textureSampler");
+        shaderProgram.createUniform("color");
+        shaderProgram.createUniform("useColor");
     }
 
     //Other Methods
@@ -73,12 +77,23 @@ public class Renderer {
 
         //world transformation (different for each GameItem)
         for (GameItem gameItem : gameItems) {
+
+            //Get reference to gameItem's mesh
+            Mesh mesh = gameItem.getMesh();
+
+            //Set model view matrix
             Matrix4f modelViewMatrix = transformation.getModelViewMatrix(gameItem, viewMatrix);
             shaderProgram.setUniform("modelView", modelViewMatrix);
 
+            //Set color and useColor flag
+            shaderProgram.setUniform("useColor", mesh.isTextured() ? 0 : 1);
+            shaderProgram.setUniform("color", mesh.getColor());
+
+            //Render mesh
             gameItem.getMesh().render();
         }
 
+        //Unbind shader program
         shaderProgram.unbind();
     }
 

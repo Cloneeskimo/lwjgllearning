@@ -1,6 +1,7 @@
 package engine.graphics;
 
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.FloatBuffer;
@@ -68,22 +69,23 @@ public class ShaderProgram {
         if (programId != 0) glDeleteProgram(programId);
     }
 
-    //Uniform Management
+    //Uniform Creation
     public void createUniform(String uniformName) throws Exception {
         int uniformLocation = glGetUniformLocation(this.programId, uniformName); //get from shader program
         if (uniformLocation < 0) throw new Exception("Could not find uniform: " + uniformName); //invalid uniform
         uniforms.put(uniformName, uniformLocation); //add to map
     }
 
+    //Uniform Setting
+    public void setUniform(String uniformName, int value) { glUniform1i(uniforms.get(uniformName), value); }
+    public void setUniform(String uniformName, Vector3f value) { glUniform3f(this.uniforms.get(uniformName), value.x, value.y, value.z); }
     public void setUniform(String uniformName, Matrix4f value) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            FloatBuffer fb = stack.mallocFloat(16); //create float buffer (auto-managed, will delete itself)
-            value.get(fb); //put matrix value into a float buffer
+        try (MemoryStack stack = MemoryStack.stackPush()) { //dump the matrix into a float buffer
+            FloatBuffer fb = stack.mallocFloat(16); //4 x 4 = 16
+            value.get(fb);
             glUniformMatrix4fv(this.uniforms.get(uniformName), false, fb);
         }
     }
-
-    public void setUniform(String uniformName, int value) { glUniform1i(uniforms.get(uniformName), value); }
 
     //Binding/Unbinding
     public void bind() { glUseProgram(programId); } //activate this program for rendering

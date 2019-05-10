@@ -82,7 +82,7 @@ public class Window {
         GL.createCapabilities();
 
         //Set clear color
-        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        glClearColor(0.5f, 0.5f, 0.5f, 0.0f);
         glEnable(GL_DEPTH_TEST);
     }
 
@@ -90,6 +90,13 @@ public class Window {
     public void update() {
         glfwSwapBuffers(this.windowHandle);
         glfwPollEvents(); //this is where our key callback will be called from
+
+        if (this.isKeyPressed(GLFW_KEY_6)) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+        if (this.isKeyPressed(GLFW_KEY_7)) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
     }
 
     //Accessors

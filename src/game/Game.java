@@ -12,6 +12,10 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
 import static org.lwjgl.glfw.GLFW.*;
 
 public class Game implements IGameLogic {
@@ -19,18 +23,24 @@ public class Game implements IGameLogic {
     //Final Data
     private static final float MOUSE_SENSITIVITY = 0.4f;
     private static final float CAMERA_SPEED = 0.15f;
+    private static final int WORLD_WIDTH = 25;
+    private static final int WORLD_LENGTH = 25;
+    private static final int MAX_WORLD_HEIGHT = 20;
+    private static final int BLOCKS_OFFSET = 5;
+    private static final boolean DYNAMIC_HEIGHTS = true;
 
     //Data
     private final Renderer renderer;
     private final Camera camera;
     private Vector3f cameraVelocity;
-    private GameItem[] gameItems;
+    private List<GameItem> gameItems;
 
     //Constructor
     public Game() {
         this.renderer = new Renderer();
         this.camera = new Camera();
         this.cameraVelocity = new Vector3f();
+        this.gameItems = new ArrayList<>();
     }
 
     @Override
@@ -39,31 +49,71 @@ public class Game implements IGameLogic {
         //initialize renderer
         this.renderer.init(window);
 
-        //Create Blocks
+        //Create Block Meshes
         Mesh grassMesh = OBJLoader.loadMesh("/models/cube.obj");
         Texture grassTexture = new Texture("/textures/grass.png");
         grassMesh.setTexture(grassTexture);
         Mesh dirtMesh = OBJLoader.loadMesh("/models/cube.obj");
         Texture dirtTexture = new Texture("/textures/dirt.png");
         dirtMesh.setTexture(dirtTexture);
-        GameItem block1 = new GameItem(grassMesh);
-        block1.setPosition(0, 0, -2);
-        GameItem block2 = new GameItem(grassMesh);
-        block2.setPosition(0, 0, -4);
-        GameItem block3 = new GameItem(grassMesh);
-        block3.setPosition(-2, 0, -2);
-        GameItem block4 = new GameItem(grassMesh);
-        block4.setPosition(-2, 2, -4);
-        GameItem block5 = new GameItem(dirtMesh);
-        block5.setPosition(-2, 0, -4);
+
+        //Randomly create blocks
+        Random r = new Random();
+        int[][] heightmap = new int[WORLD_LENGTH][WORLD_WIDTH];
+        for (int z = 0; z < WORLD_LENGTH; z++) {
+            for (int x = 0; x < WORLD_WIDTH; x++) {
+                List<Integer> nearbyHeights = new ArrayList<>();
+                if (!(x - 1 < 0)) nearbyHeights.add(heightmap[z][x-1]);
+                if (!(z - 1 < 0)) nearbyHeights.add(heightmap[z-1][x]);
+                if (!(z + 1 >= WORLD_LENGTH)) {
+                    if (heightmap[z+1][x] != 0) nearbyHeights.add(heightmap[z+1][x]);
+                }
+                if (!(x + 1 >= WORLD_WIDTH)) {
+                    if (heightmap[z][x+1] != 0) nearbyHeights.add(heightmap[z][x+1]);
+                }
+                boolean badPlacement = true;
+                int y = 1;
+                do {
+                    y = r.nextInt(MAX_WORLD_HEIGHT) + 1;
+                    if (nearbyHeights.size() == 0) badPlacement = false;
+                    else {
+                        if (DYNAMIC_HEIGHTS) {
+                            badPlacement = true;
+                            for (int nearbyHeight : nearbyHeights) {
+                                if (y >= nearbyHeight - 1 && y <= nearbyHeight + 1) badPlacement = false;
+                            }
+                        } else {
+                            badPlacement = false;
+                            for (int nearbyHeight : nearbyHeights) {
+                                if (y < nearbyHeight - 1 || y > nearbyHeight + 1) badPlacement = true;
+                            }
+                        }
+                    }
+                } while (badPlacement);
+                heightmap[z][x] = y;
+            }
+        }
+        for (int z = 0; z < WORLD_LENGTH; z++) {
+            for (int x = 0; x < WORLD_WIDTH; x++) {
+                for (int y = 0; y < heightmap[z][x]; y++) {
+                    GameItem newBlock = new GameItem(dirtMesh);
+                    newBlock.setScale(0.5f);
+                    newBlock.setPosition(x + BLOCKS_OFFSET, y, z + BLOCKS_OFFSET);
+                    gameItems.add(newBlock);
+                }
+                GameItem newBlock = new GameItem(grassMesh);
+                newBlock.setScale(0.5f);
+                newBlock.setPosition(x + BLOCKS_OFFSET, heightmap[z][x], z + BLOCKS_OFFSET);
+                gameItems.add(newBlock);
+            }
+        }
 
         //Create Bunny
         Mesh bunnyMesh = OBJLoader.loadMesh("/models/bunny.obj");
         GameItem bunny = new GameItem(bunnyMesh);
         bunny.setScale(1.0f);
-        bunny.setPosition(6, 0, -2);
-
-        gameItems = new GameItem[] { block1, block2, block3, block4, block5, bunny };
+        bunny.setPosition(BLOCKS_OFFSET, MAX_WORLD_HEIGHT + 3, BLOCKS_OFFSET);
+        gameItems.add(bunny);
     }
 
     @Override

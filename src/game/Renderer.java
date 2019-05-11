@@ -8,6 +8,9 @@ import engine.graphics.Mesh;
 import engine.graphics.ShaderProgram;
 import engine.graphics.Transformation;
 import org.joml.Matrix4f;
+
+import java.util.List;
+
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
@@ -50,7 +53,7 @@ public class Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    public void render(Window window, Camera camera, GameItem[] gameItems) {
+    public void render(Window window, Camera camera, List<GameItem> gameItems) {
 
         //clear
         clear();

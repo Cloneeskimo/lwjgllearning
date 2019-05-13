@@ -22,8 +22,7 @@ public class Mesh {
     private final int vaoID;
     private final List<Integer> vboIDs;
     private final int vertexCount;
-    private Texture texture;
-    private Vector3f color;
+    private Material material;
 
     //Constructor
     public Mesh(float[] positions, float[] textureCoords, float[] normals, int[] indices) {
@@ -32,9 +31,6 @@ public class Mesh {
         FloatBuffer normalVectorsBuffer = null;
         IntBuffer idxBuffer = null;
         try {
-            //Set color to default
-            this.color = DEFAULT_COLOR;
-
             //Set vertex count
             vertexCount = indices.length; //assumes triangles
             this.vboIDs = new ArrayList();
@@ -101,15 +97,12 @@ public class Mesh {
     }
 
     //Accessors
-    public boolean isTextured() { return this.texture != null; }
-    public Texture getTexture() { return this.texture; }
-    public Vector3f getColor() { return this.color; }
+    public Material getMaterial() { return this.material; }
     public int getVaoID() { return this.vaoID; }
     public int getVertexCount() { return this.vertexCount; }
 
     //Mutators
-    public void setTexture(Texture texture) { this.texture = texture; }
-    public void setColor(Vector3f color) { this.color = color; }
+    public void setMaterial(Material material) { this.material = material; }
 
     //Other Methods
     public void cleanup() {
@@ -124,12 +117,13 @@ public class Mesh {
         glDeleteVertexArrays(vaoID); //delete
 
         //Cleanup texture
-        if (this.texture != null) texture.cleanup();
+        this.material.cleanup();
     }
 
     public void render() {
 
-        if (this.texture != null) {
+        Texture texture = this.material.getTexture();
+        if (texture != null) {
             glActiveTexture(GL_TEXTURE0); //activate first texture bank
             glBindTexture(GL_TEXTURE_2D, texture.getID()); //bind the texture
         }

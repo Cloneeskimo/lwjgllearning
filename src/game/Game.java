@@ -4,10 +4,7 @@ import engine.GameItem;
 import engine.IGameLogic;
 import engine.MouseInput;
 import engine.Window;
-import engine.graphics.Camera;
-import engine.graphics.Mesh;
-import engine.graphics.OBJLoader;
-import engine.graphics.Texture;
+import engine.graphics.*;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
@@ -23,17 +20,14 @@ public class Game implements IGameLogic {
     //Final Data
     private static final float MOUSE_SENSITIVITY = 0.4f;
     private static final float CAMERA_SPEED = 0.15f;
-    private static final int WORLD_WIDTH = 25;
-    private static final int WORLD_LENGTH = 25;
-    private static final int MAX_WORLD_HEIGHT = 20;
-    private static final int BLOCKS_OFFSET = 5;
-    private static final boolean DYNAMIC_HEIGHTS = true;
-
-    //Data
     private final Renderer renderer;
     private final Camera camera;
-    private Vector3f cameraVelocity;
+    private final Vector3f cameraVelocity;
+
+    //Instance Data
     private List<GameItem> gameItems;
+    private LightPoint light;
+    private Vector3f ambientLight;
 
     //Constructor
     public Game() {
@@ -49,71 +43,38 @@ public class Game implements IGameLogic {
         //initialize renderer
         this.renderer.init(window);
 
-        //Create Block Meshes
-        Mesh grassMesh = OBJLoader.loadMesh("/models/cube.obj");
-        Texture grassTexture = new Texture("/textures/grass.png");
-        grassMesh.setTexture(grassTexture);
-        Mesh dirtMesh = OBJLoader.loadMesh("/models/cube.obj");
-        Texture dirtTexture = new Texture("/textures/dirt.png");
-        dirtMesh.setTexture(dirtTexture);
+        //game item setup
+        float reflectance = 1f;
+        Mesh mesh = OBJLoader.loadMesh("/models/cube.obj");
+        Texture texture = new Texture("/textures/grass.png");
+        Material material = new Material(texture, reflectance);
+        mesh.setMaterial(material);
 
-        //Randomly create blocks
-        Random r = new Random();
-        int[][] heightmap = new int[WORLD_LENGTH][WORLD_WIDTH];
-        for (int z = 0; z < WORLD_LENGTH; z++) {
-            for (int x = 0; x < WORLD_WIDTH; x++) {
-                List<Integer> nearbyHeights = new ArrayList<>();
-                if (!(x - 1 < 0)) nearbyHeights.add(heightmap[z][x-1]);
-                if (!(z - 1 < 0)) nearbyHeights.add(heightmap[z-1][x]);
-                if (!(z + 1 >= WORLD_LENGTH)) {
-                    if (heightmap[z+1][x] != 0) nearbyHeights.add(heightmap[z+1][x]);
-                }
-                if (!(x + 1 >= WORLD_WIDTH)) {
-                    if (heightmap[z][x+1] != 0) nearbyHeights.add(heightmap[z][x+1]);
-                }
-                boolean badPlacement = true;
-                int y = 1;
-                do {
-                    y = r.nextInt(MAX_WORLD_HEIGHT) + 1;
-                    if (nearbyHeights.size() == 0) badPlacement = false;
-                    else {
-                        if (DYNAMIC_HEIGHTS) {
-                            badPlacement = true;
-                            for (int nearbyHeight : nearbyHeights) {
-                                if (y >= nearbyHeight - 1 && y <= nearbyHeight + 1) badPlacement = false;
-                            }
-                        } else {
-                            badPlacement = false;
-                            for (int nearbyHeight : nearbyHeights) {
-                                if (y < nearbyHeight - 1 || y > nearbyHeight + 1) badPlacement = true;
-                            }
-                        }
-                    }
-                } while (badPlacement);
-                heightmap[z][x] = y;
-            }
-        }
-        for (int z = 0; z < WORLD_LENGTH; z++) {
-            for (int x = 0; x < WORLD_WIDTH; x++) {
-                for (int y = 0; y < heightmap[z][x]; y++) {
-                    GameItem newBlock = new GameItem(dirtMesh);
-                    newBlock.setScale(0.5f);
-                    newBlock.setPosition(x + BLOCKS_OFFSET, y, z + BLOCKS_OFFSET);
-                    gameItems.add(newBlock);
-                }
-                GameItem newBlock = new GameItem(grassMesh);
-                newBlock.setScale(0.5f);
-                newBlock.setPosition(x + BLOCKS_OFFSET, heightmap[z][x], z + BLOCKS_OFFSET);
-                gameItems.add(newBlock);
-            }
-        }
+        //game item creation
+        GameItem item = new GameItem(mesh);
+        item.setScale(0.5f);
+        item.setPosition(0, 0, -2);
+        this.gameItems.add(item);
 
-        //Create Bunny
-        Mesh bunnyMesh = OBJLoader.loadMesh("/models/bunny.obj");
-        GameItem bunny = new GameItem(bunnyMesh);
-        bunny.setScale(1.0f);
-        bunny.setPosition(BLOCKS_OFFSET, MAX_WORLD_HEIGHT + 3, BLOCKS_OFFSET);
-        gameItems.add(bunny);
+
+        //camera item setup
+        Mesh cameraMesh = OBJLoader.loadMesh("/models/cube.obj");
+        Texture cameraTexture = new Texture("/textures/dirt.png");
+        Material cameraMaterial = new Material(cameraTexture, reflectance);
+        cameraMesh.setMaterial(cameraMaterial);
+        GameItem cameraItem = new GameItem(cameraMesh);
+        cameraItem.setScale(0.2f);
+        cameraItem.setPosition(0, 0, 1);
+        gameItems.add(cameraItem);
+
+        //setup light
+        ambientLight = new Vector3f(0.3f, 0.3f, 0.3f); //set ambient light (quite dim for now)
+        Vector3f lightColor = new Vector3f(1, 1, 1); //white light for now
+        Vector3f lightPosition = new Vector3f(0, 0, 1); //light position
+        float lightIntensity = 1.0f; //full light intensity
+        this.light = new LightPoint(lightColor, lightPosition, lightIntensity); //set light
+        this.light.setAttenuation(new LightPoint.Attenuation(0.0f, 0.0f, 1.0f)); //setup light attenuation
+
     }
 
     @Override
@@ -126,6 +87,16 @@ public class Game implements IGameLogic {
         if (window.isKeyPressed(GLFW_KEY_D)) cameraVelocity.x += 1;
         if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraVelocity.y += 1;
         if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraVelocity.y -= 1;
+        float lightPos = this.light.getPosition().z;
+        if (window.isKeyPressed(GLFW_KEY_N)) {
+            this.light.getPosition().z = lightPos + 0.1f;
+            this.gameItems.get(1).getPosition().z = lightPos + 0.1f;
+        }
+        if (window.isKeyPressed(GLFW_KEY_M)) {
+            this.light.getPosition().z = lightPos - 0.1f;
+            this.gameItems.get(1).getPosition().z = lightPos - 0.1f;
+        }
+
     }
 
     @Override
@@ -143,7 +114,7 @@ public class Game implements IGameLogic {
 
     @Override
     public void render(Window window) {
-        renderer.render(window, camera, this.gameItems);
+        renderer.render(window, camera, this.gameItems, this.ambientLight, this.light);
     }
 
     @Override

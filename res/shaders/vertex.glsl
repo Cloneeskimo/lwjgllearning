@@ -1,23 +1,32 @@
-//directive that states the version of GLSL we are using
+//GLSL Version
 #version 330
 
-//specifies the input format for the shader. can be whatever data structure
-//we decide to pass in (can be a position, additional data, whatever)
-//the vertex shader just receives an array of floats. when we fill the buffer,
-//we define the buffer chunks that are going to be processed by the shader.
-//In this case, we expect a vector of x, y, z
-layout (location=0) in vec3 position;
-layout (location=1) in vec2 textureCoords; //processed by fragment shader, so will just be passed through
-out vec2 textureCoordsOut;
+//VAO Inputs
+layout (location=0) in vec3 position;            //position in world space
+layout (location=1) in vec2 textureCoordsVertex; //processed by fragment shader, so will just be passed through
+layout (location=2) in vec3 vertexNormal;        //normal vector
 
-//uniforms are global GLSL variables
+//Outs
+out vec2 textureCoordsFrag; //texture coordinates
+out vec3 mvVertexNormal;    //pass through normal in model view space for lighting
+out vec3 mvVertexPos;       //pass through position in model view space for lighting
+
+//Uniforms
 uniform mat4 projection; //projection matrix
 uniform mat4 modelView;  //model view matrix (world and view)
 
+//Main Function
 void main()
 {
-    //In this very basic shader, we are just returning the received position
-    //with no transformations applied.
-    gl_Position = projection * modelView * vec4(position, 1.0); //vec4 because some advanced operations require a fourth dimension
-    textureCoordsOut = textureCoords;
+    //position
+    vec4 mvPos = modelView * vec4(position, 1.0); //convert position to model view space
+    gl_Position = projection * mvPos; //convert position to projection space and set it as gl_Position
+
+    //texture coordinates
+    textureCoordsFrag = textureCoordsVertex; //just pass through texture coordinates
+
+    //normals - we convert the normal vector to model view, but we first set w to 0 because we are not interested
+    //in its translation, only its rotation and scale. setting w to 0 prevents the translation from occuring
+    mvVertexNormal = normalize(modelView * vec4(vertexNormal, 0.0)).xyz; //convert normal to modelview space
+    mvVertexPos = mvPos.xyz; //pass through vertex position for lighting calculations
 }

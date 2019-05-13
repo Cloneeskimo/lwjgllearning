@@ -3,11 +3,10 @@ package game;
 import engine.GameItem;
 import engine.Utils;
 import engine.Window;
-import engine.graphics.Camera;
-import engine.graphics.Mesh;
-import engine.graphics.ShaderProgram;
-import engine.graphics.Transformation;
+import engine.graphics.*;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.util.List;
 
@@ -23,10 +22,12 @@ public class Renderer {
     private static final float Z_FAR = 1000.f;
     private Transformation transformation;
     private ShaderProgram shaderProgram;
+    private float specularPower;
 
     //Constructor
     public Renderer() {
         this.transformation = new Transformation();
+        this.specularPower = 10f;
     }
 
     //Initializer
@@ -38,14 +39,16 @@ public class Renderer {
         shaderProgram.createFragmentShader(Utils.loadResources("/shaders/fragment.glsl"));
         shaderProgram.link();
 
-        //Create Matrix Uniforms
+        //Create Matrix and Texture Sampler Uniforms
         shaderProgram.createUniform("projection");
         shaderProgram.createUniform("modelView");
-
-        //Create Other Uniforms
         shaderProgram.createUniform("textureSampler");
-        shaderProgram.createUniform("color");
-        shaderProgram.createUniform("useColor");
+
+        //Create Lighting/Material Uniforms
+        shaderProgram.createMaterialUniform("material");
+        shaderProgram.createLightPointUniform("lightPoint");
+        shaderProgram.createUniform("ambientLight");
+        shaderProgram.createUniform("specularPower");
     }
 
     //Other Methods
@@ -53,7 +56,7 @@ public class Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    public void render(Window window, Camera camera, List<GameItem> gameItems) {
+    public void render(Window window, Camera camera, List<GameItem> gameItems, Vector3f ambientLight, LightPoint lightPoint) {
 
         //clear
         clear();
@@ -78,6 +81,20 @@ public class Renderer {
         //view transformation (same for each GameItem, changes depending on camera)
         Matrix4f viewMatrix = transformation.getViewMatrix(camera);
 
+        //update light uniforms
+        shaderProgram.setUniform("ambientLight", ambientLight);
+        shaderProgram.setUniform("specularPower", this.specularPower);
+
+        //get a copy of the light object and transform its position to view coordinates
+        LightPoint light = new LightPoint(lightPoint); //copy light point
+        Vector3f lightPos = light.getPosition(); //get position
+        Vector4f aux = new Vector4f(lightPos, 1);
+        aux.mul(viewMatrix);
+        lightPos.x = aux.x;
+        lightPos.y = aux.y;
+        lightPos.z = aux.z;
+        shaderProgram.setUniform("lightPoint", light);
+
         //world transformation (different for each GameItem)
         for (GameItem gameItem : gameItems) {
 
@@ -88,12 +105,11 @@ public class Renderer {
             Matrix4f modelViewMatrix = transformation.getModelViewMatrix(gameItem, viewMatrix);
             shaderProgram.setUniform("modelView", modelViewMatrix);
 
-            //Set color and useColor flag
-            shaderProgram.setUniform("useColor", mesh.isTextured() ? 0 : 1);
-            shaderProgram.setUniform("color", mesh.getColor());
+            //Set material uniform
+            shaderProgram.setUniform("material", mesh.getMaterial());
 
             //Render mesh
-            gameItem.getMesh().render();
+            mesh.render();
         }
 
         //Unbind shader program

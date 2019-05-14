@@ -1,5 +1,7 @@
 package engine.graphics;
 
+import engine.graphics.light.DirectionalLight;
+import engine.graphics.light.LightPoint;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -94,11 +96,18 @@ public class ShaderProgram {
         createUniform(uniformName + ".reflectance");
     }
 
+    public void createDirectionalLightUniform(String uniformName) throws Exception {
+        createUniform(uniformName + ".color");
+        createUniform(uniformName + ".direction");
+        createUniform(uniformName + ".intensity");
+    }
+
     //Uniform Setting
     public void setUniform(String uniformName, int value) { glUniform1i(uniforms.get(uniformName), value); }
     public void setUniform(String uniformName, float value) { glUniform1f(uniforms.get(uniformName), value); }
     public void setUniform(String uniformName, Vector3f value) { glUniform3f(this.uniforms.get(uniformName), value.x, value.y, value.z); }
     public void setUniform(String uniformName, Vector4f value) { glUniform4f(this.uniforms.get(uniformName), value.x, value.y, value.z, value.w); }
+
     public void setUniform(String uniformName, Matrix4f value) {
         try (MemoryStack stack = MemoryStack.stackPush()) { //dump the matrix into a float buffer
             FloatBuffer fb = stack.mallocFloat(16); //4 x 4 = 16
@@ -123,6 +132,12 @@ public class ShaderProgram {
         setUniform(uniformName + ".specular", value.getSpecularColor());
         setUniform(uniformName + ".hasTexture", value.isTextured() ? 1 : 0);
         setUniform(uniformName + ".reflectance", value.getReflectance());
+    }
+
+    public void setUniform(String uniformName, DirectionalLight value) {
+        setUniform(uniformName + ".color", value.getColor());
+        setUniform(uniformName + ".direction", value.getDirection());
+        setUniform(uniformName + ".intensity", value.getIntensity());
     }
 
     //Binding/Unbinding

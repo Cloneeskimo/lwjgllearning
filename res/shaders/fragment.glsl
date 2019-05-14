@@ -24,6 +24,13 @@ struct LightPoint { //assumed to be in view coordinates
     Attenuation attenuation;
 };
 
+//Directional Light Struct
+struct DirectionalLight {
+    vec3 color;
+    vec3 direction;
+    float intensity;
+};
+
 /*
     a material is defined by a set of colors (if we don't use texture to color the fragments)
     ambient, diffuse, specular components
@@ -45,6 +52,7 @@ uniform vec3 ambientLight;        //a color which will affect every fragment in 
 uniform float specularPower;      //exponent used in calculation specular light
 uniform Material material;        //material characteristics
 uniform LightPoint lightPoint;    //a point of light
+uniform DirectionalLight sun;     //the sun is a directional light
 
 //Global Variables - use these for the material so that we do not do redundant texture lookups
 //if the material uses a texture instead of a color
@@ -67,55 +75,51 @@ void setupColors(Material material, vec2 textureCoordinate) {
     }
 }
 
-//Light Calculating Function
-vec4 calculateLight(LightPoint light, vec3 position, vec3 normal) {
+//Light Color Calculation Function
+vec4 calculateLightColor(vec3 lightColor, float lightIntensity, vec3 position, vec3 toLightDirection, vec3 normal) {
 
     //create diffuse and specular vectors
     vec4 diffuseColor = vec4(0, 0, 0, 0);
     vec4 specularColor = vec4(0, 0, 0, 0);
 
-    //diffuse light calculation
-    vec3 lightDirection = lightPoint.position - position; //calculate vector from fragment to light position
-    vec3 toLightSource = normalize(lightDirection); //normalize
-    float diffuseFactor = max(dot(normal, toLightSource), 0.0);
-    /*
-        above, we calculate the diffuse factor by doing the dot product of the fragment's normal vector
-        and the vector from the fragment to the light source. Essentially, this checks how parallel the
-        two vectors are. The more parallel, the higher the factor, the more bright. In other words, the more
-        that the fragment faces the light, the brighter it will be.
-    */
-    diffuseColor = diffuseC * vec4(light.color, 1.0) * light.intensity * diffuseFactor; //calculate final diffuse color
-    /*
-        above, diffuse color takes into account the base diffuse color as provided by the material, the light's color, the light's intensity,
-        and the diffuse factor just calculated based on how much the fragment faces the light
-    */
+    //diffuse light
+    float diffuseFactor = max(dot(normal, toLightDirection), 0.0);
+    diffuseColor = diffuseC * vec4(lightColor, 1.0) * lightIntensity * diffuseFactor;
 
     //specular light
-    vec3 cameraDirection = normalize(-position); //calculate camera direction
-    vec3 fromLightSource = -toLightSource; //vector from light source to fragment
-    vec3 reflectedLight = normalize(reflect(fromLightSource, normal)); //calculate reflected light
-    float specularFactor = max(dot(cameraDirection, reflectedLight), 0.0); //the more the camera points to the material, the higher the specular factor
-    specularFactor = pow(specularFactor, specularPower); //raise to power
-    specularColor = specularC * specularFactor * material.reflectance * vec4(light.color, 1.0); //calculate final specular color
-    /*
-        above, specular color takes into account the base specular color as provided by the material, the factor just calculated by camera
-        position, the material's ability to reflect, and the light's color.
-    */
+    vec3 cameraDirection = normalize(-position);
+    vec3 fromLightDirection = -toLightDirection;
+    vec3 reflectedLight = normalize(reflect(fromLightDirection, normal));
+    float specularFactor = max(dot(cameraDirection, reflectedLight), 0.0);
+    specularFactor = pow(specularFactor, specularPower);
+    specularColor = specularC * lightIntensity * specularFactor * material.reflectance * vec4(lightColor, 1.0);
 
-    //attenuation
+    //combination of the two
+    return (diffuseColor + specularColor);
+}
+
+vec4 calculateLightPoint(LightPoint light, vec3 position, vec3 normal) {
+
+    //get base light color
+    vec3 lightDirection = light.position - position;
+    vec3 toLightDir = normalize(lightDirection);
+    vec4 lightColor = calculateLightColor(light.color, light.intensity, position, toLightDir, normal);
+
+    //apply attenuation
     float distance = length(lightDirection);
-    float attenuationInv = (light.attenuation.constant) + (light.attenuation.linear * distance) + (light.attenuation.exponent * distance * distance);
-    return (diffuseColor + specularColor) / attenuationInv; //return final color
-    /*
-        above, we calculate the distance the fragment is from the light. then, we take that into account by calculating the
-        attenuation suffered by the light in its travel to the vertex we are processing, and dividing the final color by that.
-    */
+    float attenuationInv = light.attenuation.constant + light.attenuation.linear * distance + light.attenuation.exponent * distance * distance;
+    return lightColor / attenuationInv;
+}
+
+vec4 calculateDirectionLight(DirectionalLight light, vec3 position, vec3 normal) {
+    return calculateLightColor(light.color, light.intensity, position, normalize(light.direction), normal);
 }
 
 //Main Function
 void main() {
 
     setupColors(material, textureCoordsFrag); //setup the color bases we will be working with (texture or manually provided?)
-    vec4 diffuseSpecularComp = calculateLight(lightPoint, mvVertexPos, mvVertexNormal); //calculate diffuse and specular light with setup color
+    vec4 diffuseSpecularComp = calculateDirectionLight(sun, mvVertexPos, mvVertexNormal); //calculate diffuse and specular light for sun
+    diffuseSpecularComp += calculateLightPoint(lightPoint, mvVertexPos, mvVertexNormal); //add on the light point
     fragColor = ambientC * vec4(ambientLight, 1) + diffuseSpecularComp; //add ambient light (unaffected by atten.) and return final fragment color
 }

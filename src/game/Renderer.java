@@ -4,6 +4,8 @@ import engine.GameItem;
 import engine.Utils;
 import engine.Window;
 import engine.graphics.*;
+import engine.graphics.light.DirectionalLight;
+import engine.graphics.light.LightPoint;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -11,8 +13,6 @@ import org.joml.Vector4f;
 import java.util.List;
 
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL20.*;
-import static org.lwjgl.opengl.GL30.*;
 
 public class Renderer {
 
@@ -47,6 +47,7 @@ public class Renderer {
         //Create Lighting/Material Uniforms
         shaderProgram.createMaterialUniform("material");
         shaderProgram.createLightPointUniform("lightPoint");
+        shaderProgram.createDirectionalLightUniform("sun");
         shaderProgram.createUniform("ambientLight");
         shaderProgram.createUniform("specularPower");
     }
@@ -56,7 +57,7 @@ public class Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    public void render(Window window, Camera camera, List<GameItem> gameItems, Vector3f ambientLight, LightPoint lightPoint) {
+    public void render(Window window, Camera camera, List<GameItem> gameItems, Vector3f ambientLight, LightPoint lightPoint, DirectionalLight sun) {
 
         //clear
         clear();
@@ -85,7 +86,7 @@ public class Renderer {
         shaderProgram.setUniform("ambientLight", ambientLight);
         shaderProgram.setUniform("specularPower", this.specularPower);
 
-        //get a copy of the light object and transform its position to view coordinates
+        //get a copy of the light point and transform its position to view coordinates
         LightPoint light = new LightPoint(lightPoint); //copy light point
         Vector3f lightPos = light.getPosition(); //get position
         Vector4f aux = new Vector4f(lightPos, 1);
@@ -94,6 +95,13 @@ public class Renderer {
         lightPos.y = aux.y;
         lightPos.z = aux.z;
         shaderProgram.setUniform("lightPoint", light);
+
+        //get a copy of the sun (directional light) and transform its position to view coordinates
+        DirectionalLight sunCopy = new DirectionalLight(sun);
+        Vector4f direction = new Vector4f(sunCopy.getDirection(), 0);
+        direction.mul(viewMatrix);
+        sunCopy.setDirection(new Vector3f(direction.x, direction.y, direction.z));
+        shaderProgram.setUniform("sun", sunCopy);
 
         //world transformation (different for each GameItem)
         for (GameItem gameItem : gameItems) {

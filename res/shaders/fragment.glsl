@@ -31,6 +31,13 @@ struct DirectionalLight {
     float intensity;
 };
 
+//Spot Light Struct
+struct SpotLight {
+    LightPoint lightPoint;
+    vec3 direction;
+    float cutoff;
+};
+
 /*
     a material is defined by a set of colors (if we don't use texture to color the fragments)
     ambient, diffuse, specular components
@@ -53,6 +60,7 @@ uniform float specularPower;      //exponent used in calculation specular light
 uniform Material material;        //material characteristics
 uniform LightPoint lightPoint;    //a point of light
 uniform DirectionalLight sun;     //the sun is a directional light
+uniform SpotLight spotLight;      //a spotlight
 
 //Global Variables - use these for the material so that we do not do redundant texture lookups
 //if the material uses a texture instead of a color
@@ -111,15 +119,32 @@ vec4 calculateLightPoint(LightPoint light, vec3 position, vec3 normal) {
     return lightColor / attenuationInv;
 }
 
+vec4 calculateSpotLight(SpotLight light, vec3 position, vec3 normal) {
+
+    //get vector from light to fragment
+    vec3 lightDirection = light.lightPoint.position - position;
+    vec3 toLightDirection = normalize(lightDirection);
+    vec3 fromLightDirection = -toLightDirection;
+    float spotAlfa = dot(fromLightDirection, normalize(light.direction));
+
+    //apply lighting changes if within cone of spot light
+    vec4 color = vec4(0, 0, 0, 0);
+    if (spotAlfa > light.cutoff) { //check if fragment is within the cone of spotlight
+        color = calculateLightPoint(light.lightPoint, position, normal);
+        color *= (1.0 - (1.0 - spotAlfa)/(1.0 - light.cutoff));
+    }
+    return color;
+}
+
 vec4 calculateDirectionLight(DirectionalLight light, vec3 position, vec3 normal) {
     return calculateLightColor(light.color, light.intensity, position, normalize(light.direction), normal);
 }
 
 //Main Function
 void main() {
-
     setupColors(material, textureCoordsFrag); //setup the color bases we will be working with (texture or manually provided?)
     vec4 diffuseSpecularComp = calculateDirectionLight(sun, mvVertexPos, mvVertexNormal); //calculate diffuse and specular light for sun
     diffuseSpecularComp += calculateLightPoint(lightPoint, mvVertexPos, mvVertexNormal); //add on the light point
+    diffuseSpecularComp += calculateSpotLight(spotLight, mvVertexPos, mvVertexNormal); //add on the spot light
     fragColor = ambientC * vec4(ambientLight, 1) + diffuseSpecularComp; //add ambient light (unaffected by atten.) and return final fragment color
 }

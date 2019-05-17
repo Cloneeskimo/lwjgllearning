@@ -6,7 +6,7 @@
 
     <groupId>com.jacoboaks</groupId>
     <artifactId>lwjgllearning</artifactId>
-    <version>c11p1</version>
+    <version>c11p2</version>
     <build>
         <plugins>
             <plugin>

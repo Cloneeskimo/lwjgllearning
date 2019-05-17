@@ -6,6 +6,7 @@ import engine.Window;
 import engine.graphics.*;
 import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.LightPoint;
+import engine.graphics.light.SpotLight;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -45,11 +46,12 @@ public class Renderer {
         shaderProgram.createUniform("textureSampler");
 
         //Create Lighting/Material Uniforms
+        shaderProgram.createUniform("ambientLight");
+        shaderProgram.createUniform("specularPower");
         shaderProgram.createMaterialUniform("material");
         shaderProgram.createLightPointUniform("lightPoint");
         shaderProgram.createDirectionalLightUniform("sun");
-        shaderProgram.createUniform("ambientLight");
-        shaderProgram.createUniform("specularPower");
+        shaderProgram.createSpotLightUniform("spotLight");
     }
 
     //Other Methods
@@ -57,7 +59,7 @@ public class Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    public void render(Window window, Camera camera, List<GameItem> gameItems, Vector3f ambientLight, LightPoint lightPoint, DirectionalLight sun) {
+    public void render(Window window, Camera camera, List<GameItem> gameItems, Vector3f ambientLight, LightPoint lightPoint, DirectionalLight sun, SpotLight spotLight) {
 
         //clear
         clear();
@@ -102,6 +104,19 @@ public class Renderer {
         direction.mul(viewMatrix);
         sunCopy.setDirection(new Vector3f(direction.x, direction.y, direction.z));
         shaderProgram.setUniform("sun", sunCopy);
+
+        //get a copy of the spot light and transform its position and direction to view coordinates
+        SpotLight spotLightCopy = new SpotLight(spotLight);
+        Vector4f spotLightDirection = new Vector4f(spotLightCopy.getDirection(), 0);
+        spotLightDirection.mul(viewMatrix);
+        spotLightCopy.setDirection(new Vector3f(spotLightDirection.x, spotLightDirection.y, spotLightDirection.z));
+        Vector3f spotLightPos = spotLightCopy.getLightPoint().getPosition();
+        Vector4f auxSpot = new Vector4f(spotLightPos, 1);
+        auxSpot.mul(viewMatrix);
+        spotLightPos.x = auxSpot.x;
+        spotLightPos.y = auxSpot.y;
+        spotLightPos.z = auxSpot.z;
+        shaderProgram.setUniform("spotLight", spotLightCopy);
 
         //world transformation (different for each GameItem)
         for (GameItem gameItem : gameItems) {

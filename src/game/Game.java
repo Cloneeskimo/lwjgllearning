@@ -7,6 +7,7 @@ import engine.Window;
 import engine.graphics.*;
 import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.LightPoint;
+import engine.graphics.light.SpotLight;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -23,7 +24,6 @@ public class Game implements IGameLogic {
     private static final float MOUSE_SENSITIVITY = 0.4f;
     private static final float CAMERA_SPEED = 0.15f;
     private static final float SUN_SPEED = 1.1f;
-    private static final boolean GENERATE_WORLD = true;
 
     //Instance Data
     private final Renderer renderer;
@@ -34,6 +34,9 @@ public class Game implements IGameLogic {
     //Light Data
     private LightPoint light;
     private DirectionalLight sun;
+    private SpotLight spotLight;
+    private float spotAngle = 0;
+    private float spotAngleVelocity = 1;
     private float sunAngle;
     private Vector3f ambientLight;
 
@@ -52,110 +55,50 @@ public class Game implements IGameLogic {
         //initialize renderer
         this.renderer.init(window);
 
-        //light item setup
+        //light point item setup
         Mesh lightMesh = OBJLoader.loadMesh("/models/cube.obj");
         Material lightMaterial = new Material(new Vector4f(1.0f, 1.0f, 0.0f, 0.0f), 1.0f);
         lightMesh.setMaterial(lightMaterial);
-        GameItem lightItem = new GameItem(lightMesh);
-        lightItem.setScale(0.2f);
-        lightItem.setPosition(0, 0, 0);
-        gameItems.add(lightItem);
+        GameItem lightPointItem = new GameItem(lightMesh);
+        lightPointItem.setScale(0.2f);
+        lightPointItem.setPosition(2, 1, 2);
+        gameItems.add(lightPointItem);
+
+        //spot light item setup
+        GameItem spotLightItem = new GameItem(lightMesh);
+        spotLightItem.setScale(0.2f);
+        spotLightItem.setPosition(2, 0, 5);
+        gameItems.add(spotLightItem);
 
         //setup light point
         ambientLight = new Vector3f(0.3f, 0.3f, 0.3f); //set ambient light (quite dim for now)
         Vector3f lightColor = new Vector3f(1, 1, 0); //white light for now
-        Vector3f lightPosition = new Vector3f(0, 0, 0); //light position
+        Vector3f lightPosition = new Vector3f(2, 1, 2); //light position
         float lightIntensity = 1.0f; //full light intensity
         this.light = new LightPoint(lightColor, lightPosition, lightIntensity); //set light
         this.light.setAttenuation(new LightPoint.Attenuation(0.0f, 0.0f, 1.0f)); //setup light attenuation
 
-        //generate small voxel world
-        if (GENERATE_WORLD) generateWorld();
+        //setup spot light
+        lightPosition = new Vector3f(2, 0, 5);
+        LightPoint lightPoint = new LightPoint(new Vector3f(1, 1, 1), lightPosition, lightIntensity);
+        lightPoint.setAttenuation(new LightPoint.Attenuation(0, 0, 1));
+        Vector3f coneDirection = new Vector3f(0, 0, -1);
+        this.spotLight = new SpotLight(lightPoint, coneDirection, 35);
 
         //setup sun
         lightPosition = new Vector3f(-1, 0, 0); //position of sun as a unit vector
         lightColor = new Vector3f(1, 1, 1); //color of sun
         this.sun = new DirectionalLight(lightColor, lightPosition, lightIntensity);
-    }
 
-    //World Generation Method
-    public void generateWorld() throws Exception {
-
-        //grass mesh
+        //create grass block
         Mesh grassMesh = OBJLoader.loadMesh("/models/cube.obj");
         Texture grassTexture = new Texture("/textures/grass.png");
         Material grassMaterial = new Material(grassTexture, 1.0f);
         grassMesh.setMaterial(grassMaterial);
-
-        //dirt mesh
-        Mesh dirtMesh = OBJLoader.loadMesh("/models/cube.obj");
-        Texture dirtTexture = new Texture("/textures/dirt.png");
-        Material dirtMaterial = new Material(dirtTexture, 1.0f);
-        dirtMesh.setMaterial(dirtMaterial);
-
-        //static final world modifiers
-        final int WORLD_LENGTH = 20;
-        final int WORLD_WIDTH = 20;
-        final int MAX_WORLD_HEIGHT = 4;
-        final int BLOCKS_OFFSET = 5;
-        final boolean DYNAMIC_HEIGHTS = false;
-
-        //fix small light
-        Vector3f lightPos = new Vector3f(BLOCKS_OFFSET + WORLD_LENGTH / 2, MAX_WORLD_HEIGHT + 1, BLOCKS_OFFSET + WORLD_WIDTH / 2);
-        this.light.setPosition(lightPos);
-        this.gameItems.get(0).setPosition(lightPos);
-
-
-        //world generation
-        Random r = new Random();
-        int[][] heightmap = new int[WORLD_LENGTH][WORLD_WIDTH];
-        for (int z = 0; z < WORLD_LENGTH; z++) {
-            for (int x = 0; x < WORLD_WIDTH; x++) {
-                List<Integer> nearbyHeights = new ArrayList<>();
-                if (!(x - 1 < 0)) nearbyHeights.add(heightmap[z][x-1]);
-                if (!(z - 1 < 0)) nearbyHeights.add(heightmap[z-1][x]);
-                if (!(z + 1 >= WORLD_LENGTH)) {
-                    if (heightmap[z+1][x] != 0) nearbyHeights.add(heightmap[z+1][x]);
-                }
-                if (!(x + 1 >= WORLD_WIDTH)) {
-                    if (heightmap[z][x+1] != 0) nearbyHeights.add(heightmap[z][x+1]);
-                }
-                boolean badPlacement = true;
-                int y = 1;
-                do {
-                    y = r.nextInt(MAX_WORLD_HEIGHT) + 1;
-                    if (nearbyHeights.size() == 0) badPlacement = false;
-                    else {
-                        if (DYNAMIC_HEIGHTS) {
-                            badPlacement = true;
-                            for (int nearbyHeight : nearbyHeights) {
-                                if (y >= nearbyHeight - 1 && y <= nearbyHeight + 1) badPlacement = false;
-                            }
-                        } else {
-                            badPlacement = false;
-                            for (int nearbyHeight : nearbyHeights) {
-                                if (y < nearbyHeight - 1 || y > nearbyHeight + 1) badPlacement = true;
-                            }
-                        }
-                    }
-                } while (badPlacement);
-                heightmap[z][x] = y;
-            }
-        }
-        for (int z = 0; z < WORLD_LENGTH; z++) {
-            for (int x = 0; x < WORLD_WIDTH; x++) {
-                for (int y = 0; y < heightmap[z][x]; y++) {
-                    GameItem newBlock = new GameItem(dirtMesh);
-                    newBlock.setScale(0.5f);
-                    newBlock.setPosition(x + BLOCKS_OFFSET, y, z + BLOCKS_OFFSET);
-                    gameItems.add(newBlock);
-                }
-                GameItem newBlock = new GameItem(grassMesh);
-                newBlock.setScale(0.5f);
-                newBlock.setPosition(x + BLOCKS_OFFSET, heightmap[z][x], z + BLOCKS_OFFSET);
-                gameItems.add(newBlock);
-            }
-        }
+        GameItem block = new GameItem(grassMesh);
+        block.setPosition(2, 0, 2);
+        block.setScale(0.5f);
+        this.gameItems.add(block);
     }
 
     @Override
@@ -168,16 +111,24 @@ public class Game implements IGameLogic {
         if (window.isKeyPressed(GLFW_KEY_D)) cameraVelocity.x += 1;
         if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraVelocity.y += 1;
         if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraVelocity.y -= 1;
-        float lightPos = this.light.getPosition().z;
+        Vector3f lightPointPos = this.light.getPosition();
         if (window.isKeyPressed(GLFW_KEY_N)) {
-            this.light.getPosition().z = lightPos + 0.1f;
-            this.gameItems.get(0).getPosition().z = lightPos + 0.1f;
+            this.gameItems.get(0).getPosition().z += 0.1f;
+            lightPointPos.z += 0.1f;
         }
         if (window.isKeyPressed(GLFW_KEY_M)) {
-            this.light.getPosition().z = lightPos - 0.1f;
-            this.gameItems.get(0).getPosition().z = lightPos - 0.1f;
+            this.gameItems.get(0).getPosition().z -= 0.1f;
+            lightPointPos.z -= 0.1f;
         }
-
+        Vector3f spotLightPos = spotLight.getLightPoint().getPosition();
+        if (window.isKeyPressed(GLFW_KEY_J)) {
+            this.gameItems.get(1).getPosition().z += 0.1f;
+            spotLightPos.z += 0.1f;
+        }
+        if (window.isKeyPressed(GLFW_KEY_K)) {
+            this.gameItems.get(1).getPosition().z -= 0.1f;
+            spotLightPos.z -= 0.1f;
+        }
     }
 
     @Override
@@ -191,6 +142,14 @@ public class Game implements IGameLogic {
             Vector2f rotVec = mouseInput.getDisplVec();
             camera.moveRotation(rotVec.x * MOUSE_SENSITIVITY, rotVec.y * MOUSE_SENSITIVITY, 0);
         }
+
+        //update spot light direction
+        spotAngle += spotAngleVelocity * 0.05f;
+        if (spotAngle > 2) spotAngleVelocity = -1;
+        if (spotAngle < -2) spotAngleVelocity = 1;
+        double spotAngleRad = Math.toRadians(spotAngle);
+        Vector3f coneDir = this.spotLight.getDirection();
+        coneDir.y = (float)Math.sin(spotAngleRad);
 
         //update sun color and intensity
         this.sunAngle += SUN_SPEED;
@@ -219,7 +178,7 @@ public class Game implements IGameLogic {
 
     @Override
     public void render(Window window) {
-        renderer.render(window, camera, this.gameItems, this.ambientLight, this.light, this.sun);
+        renderer.render(window, camera, this.gameItems, this.ambientLight, this.light, this.sun, this.spotLight);
     }
 
     @Override

@@ -32,12 +32,12 @@ public class Game implements IGameLogic {
     private List<GameItem> gameItems;
 
     //Light Data
-    private LightPoint light;
-    private DirectionalLight sun;
-    private SpotLight spotLight;
-    private float spotAngle = 0;
-    private float spotAngleVelocity = 1;
-    private float sunAngle;
+    private LightPoint[] lightPoints;
+    private SpotLight[] spotLights;
+    private DirectionalLight directionalLight;
+    private float spotLightAngle = 0;
+    private float spotLightAngleVelocity = 1;
+    private float directionalLightAngle;
     private Vector3f ambientLight;
 
     //Constructor
@@ -46,7 +46,7 @@ public class Game implements IGameLogic {
         this.camera = new Camera();
         this.cameraVelocity = new Vector3f();
         this.gameItems = new ArrayList<>();
-        this.sunAngle = -90;
+        this.directionalLightAngle = -90;
     }
 
     @Override
@@ -55,55 +55,59 @@ public class Game implements IGameLogic {
         //initialize renderer
         this.renderer.init(window);
 
-        //light point item setup
-        Mesh lightMesh = OBJLoader.loadMesh("/models/cube.obj");
-        Material lightMaterial = new Material(new Vector4f(1.0f, 1.0f, 0.0f, 0.0f), 1.0f);
-        lightMesh.setMaterial(lightMaterial);
-        GameItem lightPointItem = new GameItem(lightMesh);
-        lightPointItem.setScale(0.2f);
-        lightPointItem.setPosition(2, 1, 2);
-        gameItems.add(lightPointItem);
-
-        //spot light item setup
-        GameItem spotLightItem = new GameItem(lightMesh);
-        spotLightItem.setScale(0.2f);
-        spotLightItem.setPosition(2, 0, 5);
-        gameItems.add(spotLightItem);
-
-        //setup light point
-        ambientLight = new Vector3f(0.3f, 0.3f, 0.3f); //set ambient light (quite dim for now)
-        Vector3f lightColor = new Vector3f(1, 1, 0); //white light for now
-        Vector3f lightPosition = new Vector3f(2, 1, 2); //light position
-        float lightIntensity = 1.0f; //full light intensity
-        this.light = new LightPoint(lightColor, lightPosition, lightIntensity); //set light
-        this.light.setAttenuation(new LightPoint.Attenuation(0.0f, 0.0f, 1.0f)); //setup light attenuation
-
-        //setup spot light
-        lightPosition = new Vector3f(2, 0, 5);
-        LightPoint lightPoint = new LightPoint(new Vector3f(1, 1, 1), lightPosition, lightIntensity);
-        lightPoint.setAttenuation(new LightPoint.Attenuation(0, 0, 1));
-        Vector3f coneDirection = new Vector3f(0, 0, -1);
-        this.spotLight = new SpotLight(lightPoint, coneDirection, 35);
-
-        //setup sun
-        lightPosition = new Vector3f(-1, 0, 0); //position of sun as a unit vector
-        lightColor = new Vector3f(1, 1, 1); //color of sun
-        this.sun = new DirectionalLight(lightColor, lightPosition, lightIntensity);
+        //set reflectance
+        float reflectance = 1f;
 
         //create grass block
         Mesh grassMesh = OBJLoader.loadMesh("/models/cube.obj");
         Texture grassTexture = new Texture("/textures/grass.png");
-        Material grassMaterial = new Material(grassTexture, 1.0f);
+        Material grassMaterial = new Material(grassTexture, reflectance);
         grassMesh.setMaterial(grassMaterial);
-        GameItem block = new GameItem(grassMesh);
-        block.setPosition(2, 0, 2);
-        block.setScale(0.5f);
-        this.gameItems.add(block);
+        GameItem grassBlock = new GameItem(grassMesh);
+        grassBlock.setScale(0.5f);
+        grassBlock.setPosition(0, 0, -2);
+        this.gameItems.add(grassBlock);
+
+        //set ambient light
+        this.ambientLight = new Vector3f(0.3f, 0.3f, 0.3f);
+
+        //setup light point
+        Vector3f lightPosition = new Vector3f(0, 1, 1);
+        float lightIntensity = 1.0f;
+        LightPoint lightPoint = new LightPoint(new Vector3f(1, 1, 0), lightPosition, lightIntensity);
+        lightPoint.setAttenuation(new LightPoint.Attenuation(0.0f, 0.0f, 1.0f));
+        lightPoints = new LightPoint[]{ lightPoint };
+
+        //setup light point object
+        Mesh lightMesh = OBJLoader.loadMesh("/models/cube.obj");
+        Material lightMaterial = new Material(new Vector4f(1.0f, 1.0f, 0.0f, 0.0f), reflectance);
+        lightMesh.setMaterial(lightMaterial);
+        GameItem lightPointItem = new GameItem(lightMesh);
+        lightPointItem.setScale(0.2f);
+        lightPointItem.setPosition(0, 1, 1);
+        this.gameItems.add(lightPointItem);
+
+        //setup spot lights
+        lightPosition = new Vector3f(0, 0, 10);
+        lightPoint = new LightPoint(new Vector3f(1, 1, 0), lightPosition, lightIntensity);
+        lightPoint.setAttenuation(new LightPoint.Attenuation(0.0f, 0.0f, 0.02f));
+        Vector3f lightDirection = new Vector3f(0, 0, -1);
+        float lightCutoff = (float)Math.cos(Math.toRadians(140));
+        SpotLight spotLight = new SpotLight(lightPoint, lightDirection, lightCutoff);
+        this.spotLights = new SpotLight[]{ spotLight, new SpotLight(spotLight) };
+
+        //setup directional light
+        lightPosition = new Vector3f(-1, 0, 0);
+        this.directionalLight = new DirectionalLight(new Vector3f(1, 1, 1), lightPosition, lightIntensity);
     }
 
     @Override
     public void input(Window window, MouseInput mouseInput) {
+
+        //mouse input
         mouseInput.input(window);
+
+        //camera movement
         this.cameraVelocity.set(0, 0, 0);
         if (window.isKeyPressed(GLFW_KEY_W)) cameraVelocity.z -= 1;
         if (window.isKeyPressed(GLFW_KEY_S)) cameraVelocity.z += 1;
@@ -111,24 +115,22 @@ public class Game implements IGameLogic {
         if (window.isKeyPressed(GLFW_KEY_D)) cameraVelocity.x += 1;
         if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraVelocity.y += 1;
         if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraVelocity.y -= 1;
-        Vector3f lightPointPos = this.light.getPosition();
+
+        //light point movement
+        Vector3f lightPointPos = this.lightPoints[0].getPosition();
         if (window.isKeyPressed(GLFW_KEY_N)) {
-            this.gameItems.get(0).getPosition().z += 0.1f;
+            this.gameItems.get(1).getPosition().z += 0.1f;
             lightPointPos.z += 0.1f;
         }
         if (window.isKeyPressed(GLFW_KEY_M)) {
-            this.gameItems.get(0).getPosition().z -= 0.1f;
+            this.gameItems.get(1).getPosition().z -= 0.1f;
             lightPointPos.z -= 0.1f;
         }
-        Vector3f spotLightPos = spotLight.getLightPoint().getPosition();
-        if (window.isKeyPressed(GLFW_KEY_J)) {
-            this.gameItems.get(1).getPosition().z += 0.1f;
-            spotLightPos.z += 0.1f;
-        }
-        if (window.isKeyPressed(GLFW_KEY_K)) {
-            this.gameItems.get(1).getPosition().z -= 0.1f;
-            spotLightPos.z -= 0.1f;
-        }
+
+        //spot light movement
+        Vector3f spotLightPos = spotLights[0].getLightPoint().getPosition();
+        if (window.isKeyPressed(GLFW_KEY_J)) spotLightPos.z += 0.1f;
+        if (window.isKeyPressed(GLFW_KEY_K)) spotLightPos.z -= 0.1f;
     }
 
     @Override
@@ -144,41 +146,41 @@ public class Game implements IGameLogic {
         }
 
         //update spot light direction
-        spotAngle += spotAngleVelocity * 0.05f;
-        if (spotAngle > 2) spotAngleVelocity = -1;
-        if (spotAngle < -2) spotAngleVelocity = 1;
-        double spotAngleRad = Math.toRadians(spotAngle);
-        Vector3f coneDir = this.spotLight.getDirection();
-        coneDir.y = (float)Math.sin(spotAngleRad);
+        spotLightAngle += spotLightAngleVelocity * 0.05f;
+        if (spotLightAngle > 2) spotLightAngleVelocity = -1;
+        if (spotLightAngle < -2) spotLightAngleVelocity = 1;
+        double spotLightAngleRad = Math.toRadians(spotLightAngle);
+        Vector3f coneDir = this.spotLights[0].getDirection();
+        coneDir.y = (float)Math.sin(spotLightAngleRad);
 
-        //update sun color and intensity
-        this.sunAngle += SUN_SPEED;
-        if (this.sunAngle > 90) {
-            this.sun.setIntensity(0);
-            if (this.sunAngle > 360) {
-                this.sunAngle = -90;
+        //update directional light color and intensity
+        this.directionalLightAngle += SUN_SPEED;
+        if (this.directionalLightAngle > 90) {
+            this.directionalLight.setIntensity(0);
+            if (this.directionalLightAngle > 360) {
+                this.directionalLightAngle = -90;
             }
-        } else if (this.sunAngle <= -80 || this.sunAngle >= 80) {
-            float factor = 1 - (float)(Math.abs(this.sunAngle) - 80) / 10.0f;
-            this.sun.setIntensity(factor);
-            this.sun.getColor().y = Math.max(factor, 0.9f);
-            this.sun.getColor().z = Math.max(factor, 0.5f);
+        } else if (this.directionalLightAngle <= -80 || this.directionalLightAngle >= 80) {
+            float factor = 1 - (float)(Math.abs(this.directionalLightAngle) - 80) / 10.0f;
+            this.directionalLight.setIntensity(factor);
+            this.directionalLight.getColor().y = Math.max(factor, 0.9f);
+            this.directionalLight.getColor().z = Math.max(factor, 0.5f);
         } else {
-            this.sun.setIntensity(1);
-            this.sun.getColor().x = 1;
-            this.sun.getColor().y = 1;
-            this.sun.getColor().z = 1;
+            this.directionalLight.setIntensity(1);
+            this.directionalLight.getColor().x = 1;
+            this.directionalLight.getColor().y = 1;
+            this.directionalLight.getColor().z = 1;
         }
 
         //update sun direction
-        double angle = Math.toRadians(this.sunAngle);
-        this.sun.getDirection().x = (float) Math.sin(angle);
-        this.sun.getDirection().y = (float) Math.cos(angle);
+        double angle = Math.toRadians(this.directionalLightAngle);
+        this.directionalLight.getDirection().x = (float) Math.sin(angle);
+        this.directionalLight.getDirection().y = (float) Math.cos(angle);
     }
 
     @Override
     public void render(Window window) {
-        renderer.render(window, camera, this.gameItems, this.ambientLight, this.light, this.sun, this.spotLight);
+        renderer.render(window, camera, this.gameItems, this.ambientLight, this.lightPoints, this.spotLights, this.directionalLight);
     }
 
     @Override

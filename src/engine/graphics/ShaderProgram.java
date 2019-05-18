@@ -97,16 +97,24 @@ public class ShaderProgram {
         createUniform(uniformName + ".attenuation.exponent");
     }
 
-    public void createDirectionalLightUniform(String uniformName) throws Exception {
-        createUniform(uniformName + ".color");
-        createUniform(uniformName + ".direction");
-        createUniform(uniformName + ".intensity");
+    public void createLightPointListUniform(String uniformName, int size) throws Exception {
+        for (int i = 0; i < size; i++) createLightPointUniform(uniformName + "[" + i + "]");
     }
 
     public void createSpotLightUniform(String uniformName) throws Exception {
         createLightPointUniform(uniformName + ".lightPoint");
         createUniform(uniformName + ".direction");
         createUniform(uniformName + ".cutoff");
+    }
+
+    public void createSpotLightListUniform(String uniformName, int size) throws Exception {
+        for (int i = 0; i < size; i++) createSpotLightUniform(uniformName + "[" + i + "]");
+    }
+
+    public void createDirectionalLightUniform(String uniformName) throws Exception {
+        createUniform(uniformName + ".color");
+        createUniform(uniformName + ".direction");
+        createUniform(uniformName + ".intensity");
     }
 
     //Uniform Setting
@@ -141,16 +149,28 @@ public class ShaderProgram {
         setUniform(uniformName + ".attenuation.exponent", attenuation.getExponent());
     }
 
-    public void setUniform(String uniformName, DirectionalLight value) {
-        setUniform(uniformName + ".color", value.getColor());
-        setUniform(uniformName + ".direction", value.getDirection());
-        setUniform(uniformName + ".intensity", value.getIntensity());
+    //REQUIREMENT: ARRAY MUST BE FULL OR EMPTY - NO NULL MEMBERS
+    public void setUniform(String uniformName, LightPoint[] value) {
+        int count = value != null ? value.length : 0;
+        for (int i = 0; i < count; i++) setUniform(uniformName + "[" + i + "]", value);
     }
 
     public void setUniform(String uniformName, SpotLight value) {
         setUniform(uniformName + ".lightPoint", value.getLightPoint());
         setUniform(uniformName + ".direction", value.getDirection());
         setUniform(uniformName + ".cutoff", value.getCutOff());
+    }
+
+    //REQUIREMENT: ARRAY MUST BE FULL OR EMPTY - NO NULL MEMBERS
+    public void setUniform(String uniformName, SpotLight[] value) {
+        int count = value != null ? value.length : 0;
+        for (int i = 0; i < count; i++) setUniform(uniformName + "[" + i + "]", value);
+    }
+
+    public void setUniform(String uniformName, DirectionalLight value) {
+        setUniform(uniformName + ".color", value.getColor());
+        setUniform(uniformName + ".direction", value.getDirection());
+        setUniform(uniformName + ".intensity", value.getIntensity());
     }
 
     //Binding/Unbinding

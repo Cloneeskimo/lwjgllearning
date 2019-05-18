@@ -1,6 +1,10 @@
 //GLSL Version
 #version 330
 
+//Light Count Constants
+const int MAX_LIGHT_POINTS = 5;
+const int MAX_SPOT_LIGHTS = 5;
+
 //Ins
 in vec2 textureCoordsFrag; //color passed from vertex shader
 in vec3 mvVertexNormal;    //vertex normal vector from vertex shader for lighting calculations (model view space)
@@ -54,13 +58,15 @@ struct Material {
 };
 
 //Uniforms
-uniform sampler2D textureSampler; //use this to define which texture unit/bank of the graphics card we will store the texture in
-uniform vec3 ambientLight;        //a color which will affect every fragment in the same way (ambient light)
-uniform float specularPower;      //exponent used in calculation specular light
-uniform Material material;        //material characteristics
-uniform LightPoint lightPoint;    //a point of light
-uniform DirectionalLight sun;     //the sun is a directional light
-uniform SpotLight spotLight;      //a spotlight
+uniform sampler2D textureSampler;               //use this to define which texture unit/bank of the graphics card we will store the texture in
+uniform vec3 ambientLight;                      //a color which will affect every fragment in the same way (ambient light)
+uniform float specularPower;                    //exponent used in calculation specular light
+uniform Material material;                      //material characteristics
+
+//Light Object Uniforms
+uniform LightPoint lightPoints[MAX_LIGHT_POINTS];
+uniform SpotLight spotLights[MAX_SPOT_LIGHTS];
+uniform DirectionalLight directionalLight;
 
 //Global Variables - use these for the material so that we do not do redundant texture lookups
 //if the material uses a texture instead of a color
@@ -106,6 +112,7 @@ vec4 calculateLightColor(vec3 lightColor, float lightIntensity, vec3 position, v
     return (diffuseColor + specularColor);
 }
 
+//Light Point Calculation Function
 vec4 calculateLightPoint(LightPoint light, vec3 position, vec3 normal) {
 
     //get base light color
@@ -119,6 +126,7 @@ vec4 calculateLightPoint(LightPoint light, vec3 position, vec3 normal) {
     return lightColor / attenuationInv;
 }
 
+//Spot Light Calculation Function
 vec4 calculateSpotLight(SpotLight light, vec3 position, vec3 normal) {
 
     //get vector from light to fragment
@@ -136,15 +144,34 @@ vec4 calculateSpotLight(SpotLight light, vec3 position, vec3 normal) {
     return color;
 }
 
+//Directional Light Calculation Function
 vec4 calculateDirectionLight(DirectionalLight light, vec3 position, vec3 normal) {
     return calculateLightColor(light.color, light.intensity, position, normalize(light.direction), normal);
 }
 
 //Main Function
 void main() {
+
+    //setup color bases
     setupColors(material, textureCoordsFrag); //setup the color bases we will be working with (texture or manually provided?)
-    vec4 diffuseSpecularComp = calculateDirectionLight(sun, mvVertexPos, mvVertexNormal); //calculate diffuse and specular light for sun
-    diffuseSpecularComp += calculateLightPoint(lightPoint, mvVertexPos, mvVertexNormal); //add on the light point
-    diffuseSpecularComp += calculateSpotLight(spotLight, mvVertexPos, mvVertexNormal); //add on the spot light
+
+    //account for directional light
+    vec4 diffuseSpecularComp = calculateDirectionLight(directionalLight, mvVertexPos, mvVertexNormal); //calculate diffuse and specular light for sun
+
+    //account for light points
+    for (int i = 0; i < MAX_LIGHT_POINTS; i++) {
+        if (lightPoints[i].intensity > 0) {
+            diffuseSpecularComp += calculateLightPoint(lightPoints[i], mvVertexPos, mvVertexNormal);
+        }
+    }
+
+    //account for spot lights
+    for (int i = 0; i < MAX_SPOT_LIGHTS; i++) {
+        if (spotLights[i].lightPoint.intensity > 0) {
+            diffuseSpecularComp += calculateSpotLight(spotLights[i], mvVertexPos, mvVertexNormal);
+        }
+    }
+
+    //account for ambient light
     fragColor = ambientC * vec4(ambientLight, 1) + diffuseSpecularComp; //add ambient light (unaffected by atten.) and return final fragment color
 }

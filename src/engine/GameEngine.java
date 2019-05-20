@@ -2,9 +2,13 @@ package engine;
 
 public class GameEngine implements Runnable {
 
-    //Data
+    //Static Data
     public static final int TARGET_FPS = 60;
     public static final int TARGET_UPS = 30;
+    public static final float FPS_UPDATE = 1.0f; //in seconds
+    public static float CURRENT_FPS = 0;
+
+    //Instance Data
     private final Window window;
     private final Thread gameLoopThread;
     private final Timer timer;
@@ -57,6 +61,7 @@ public class GameEngine implements Runnable {
         float accumulator = 0f;
         float interval = 1f / TARGET_UPS;
         boolean running = true;
+        float fpsUpdateCount = 0;
 
         //Loop
         while (running && !window.shouldClose()) {
@@ -64,6 +69,7 @@ public class GameEngine implements Runnable {
             //Timekeeping
             elapsedTime = this.timer.getElapsedTime();
             accumulator += elapsedTime;
+            fpsUpdateCount += elapsedTime;
 
             //Input
             this.input();
@@ -76,6 +82,10 @@ public class GameEngine implements Runnable {
 
             //Render
             this.render();
+            if (fpsUpdateCount > GameEngine.FPS_UPDATE) {
+                GameEngine.CURRENT_FPS = 1 / elapsedTime;
+                fpsUpdateCount -= GameEngine.FPS_UPDATE;
+            }
 
             //Sync
             if (!window.isvSync()) this.sync(); //manual sync if no V-Sync

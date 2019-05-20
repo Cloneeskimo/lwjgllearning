@@ -1,5 +1,6 @@
 package game;
 
+import engine.GameEngine;
 import engine.gameitem.GameItem;
 import engine.IGameLogic;
 import engine.MouseInput;
@@ -101,7 +102,7 @@ public class Game implements IGameLogic {
         this.sceneLighting.setDirectionalLight(new DirectionalLight(new Vector3f(1, 1, 1), lightPosition, lightIntensity));
 
         //create hud
-        this.hud = new Hud("UPS: ");
+        this.hud = new Hud("FPS: N/A");
         this.hud.updateSize(window);
     }
 
@@ -181,7 +182,7 @@ public class Game implements IGameLogic {
         directionalLight.getDirection().y = (float) Math.cos(angle);
 
         //set text
-        this.hud.setStatusText("UPS: " + 1 / interval);
+        this.hud.setStatusText("FPS: " + GameEngine.CURRENT_FPS);
     }
 
     @Override

@@ -1,11 +1,17 @@
 package engine;
 
+import engine.graphics.Transformation;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.system.MemoryStack;
+
+import java.nio.IntBuffer;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.stb.STBImage.stbi_failure_reason;
+import static org.lwjgl.stb.STBImage.stbi_load_from_memory;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class Window {
@@ -53,6 +59,21 @@ public class Window {
         //create the window
         this.windowHandle = glfwCreateWindow(this.width, this.height, this.title, NULL, NULL);
         if (this.windowHandle == NULL) throw new RuntimeException("Failed to create the GLFW window");
+
+        //get window frame size
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+
+            //allocate space for width, height
+            IntBuffer w = stack.mallocInt(1);
+            IntBuffer h = stack.mallocInt(1);
+
+            //load image from memory
+            glfwGetFramebufferSize(this.windowHandle, w, h);
+
+            //set width and height
+            this.width = w.get();
+            this.height = h.get();
+        }
 
         //setup resize callback
         glfwSetFramebufferSizeCallback(this.windowHandle, (window, width, height) -> {

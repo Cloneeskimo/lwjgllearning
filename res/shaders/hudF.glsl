@@ -4,7 +4,6 @@
 
 //Inputs
 in vec2 textureCoordsFrag;
-in vec3 mvPos;
 out vec4 fragColor;
 
 //Uniforms

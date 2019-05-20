@@ -11,9 +11,13 @@ import engine.graphics.light.SpotLight;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+import org.lwjgl.BufferUtils;
 
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.List;
 
+import static org.lwjgl.glfw.GLFW.glfwGetWindowSize;
 import static org.lwjgl.opengl.GL11.*;
 
 public class Renderer {
@@ -122,7 +126,6 @@ public class Renderer {
         renderLights(viewMatrix, lighting);
 
         //world transformation (different for each GameItem)
-        System.out.println(gameItems.size());
         for (GameItem gameItem : gameItems) {
 
             //Get reference to gameItem's mesh

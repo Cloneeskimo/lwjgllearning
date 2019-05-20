@@ -15,15 +15,15 @@ public class Texture {
 
     //Data
     private final int id;
+    private final int width, height;
 
-    //Static Texture Loading Method
-    private static int loadTexture(String fileName) throws Exception {
+    //Constructors
+    public Texture(String fileName) throws Exception { //from filename
 
-        //Data
-        int width, height;
+        //creat buffer
         ByteBuffer buffer;
 
-        //Load Texture File
+        //load texture from file
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer w = stack.mallocInt(1); //buffer to hold width
             IntBuffer h = stack.mallocInt(1); //buffer to hold height
@@ -35,9 +35,48 @@ public class Texture {
             buffer = stbi_load(filePath, w, h, channels, 4); //four channels: r, g, b, a -
             if (buffer == null) throw new Exception("Image file [" + filePath + "] not loaded: " + stbi_failure_reason());
 
-            width = w.get();
-            height = h.get();
+            this.width = w.get();
+            this.height = h.get();
         }
+
+        //set id
+        this.id = createTexture(buffer);
+
+        //free image memory
+        stbi_image_free(buffer);
+    }
+
+    public Texture(ByteBuffer imageBuffer) throws Exception { //from buffer
+
+        //create buffer
+        ByteBuffer buffer;
+
+        //load texture from memory
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+
+            //allocate space for width, height, channels
+            IntBuffer w = stack.mallocInt(1);
+            IntBuffer h = stack.mallocInt(1);
+            IntBuffer channels = stack.mallocInt(1);
+
+            //load image from memory
+            buffer = stbi_load_from_memory(imageBuffer, w, h, channels, 4);
+            if (buffer == null) throw new Exception("Image file not loaded: " + stbi_failure_reason());
+
+            //set width and height
+            this.width = w.get();
+            this.height = h.get();
+        }
+
+        //create texture
+        this.id = createTexture(buffer);
+
+        //free image memory
+        stbi_image_free(buffer);
+    }
+
+    //Texture Creation Method
+    private int createTexture(ByteBuffer buffer) {
 
         //Create Texture
         int textureId = glGenTextures(); //Create new OpenGL Texture
@@ -46,12 +85,12 @@ public class Texture {
         //Sometimes, before using glTexImage2D, filtering parameters are set up. They refer to how
         //the image will be drawn when scaling and how pixels will be interpolated.
         //if those parameters are not set, the texture will not be displayed. They may look something like this:
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         //These basically say that when a pixel is drawn with no direct one-to-one association to a texture coordinate,
         //it will pick the nearest texture coordinate point. Instead of doing this, we can generate mipmaps as well, which
         //we do before glTexImage2D.
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer); //Unpack data
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this.width, this.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer); //Unpack data
         //Parameters for glTexImage2D:
         //(@target) - target texture (its type) - GL_TEXTURE_2D in this case
         //(@level) - the level-of-detail number. level 0 is the base image level. level n is the nth mipmap reduction image
@@ -62,16 +101,15 @@ public class Texture {
         //(@type) - specifies the data type of the pixel data. we are using unsigned bytes for this.
         //(@data) - the buffer storing the data
         glGenerateMipmap(GL_TEXTURE_2D); //Generate MipMaps
-        stbi_image_free(buffer); //Free Buffer
-        return textureId; //Return textureID
-    }
 
-    //Constructors
-    public Texture(String fileName) throws Exception { this(loadTexture(fileName)); }
-    public Texture(int id) { this.id = id; }
+        //return texture ID
+        return textureId;
+    }
 
     //Accessors
     public int getID() { return this.id; }
+    public int getWidth() { return this.width; }
+    public int getHeight() { return this.height; }
 
     //Other Methods
     public void bind() { glBindTexture(GL_TEXTURE_2D, this.id); }

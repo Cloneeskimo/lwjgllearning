@@ -104,22 +104,7 @@ public class Mesh {
     //Mutators
     public void setMaterial(Material material) { this.material = material; }
 
-    //Other Methods
-    public void cleanup() {
-
-        //Disable vbo at index 0 of vao
-        glDisableVertexAttribArray(0);
-
-        //Delete VBO, VAO
-        glBindBuffer(GL_ARRAY_BUFFER, 0); //first make sure isn't bound
-        for (int vbo : this.vboIDs) glDeleteBuffers(vbo);
-        glBindVertexArray(0); //first make sure isn't bound
-        glDeleteVertexArrays(vaoID); //delete
-
-        //Cleanup texture
-        this.material.cleanup();
-    }
-
+    //Render Method
     public void render() {
 
         Texture texture = this.material.getTexture();
@@ -144,8 +129,31 @@ public class Mesh {
         //Restore state (unbind)
         glDisableVertexAttribArray(0); //disable our position vbo at index 0 in the vao
         glDisableVertexAttribArray(1); //disable our texture coords vbo at index 1 in the vao
-        glDisableVertexAttribArray(2); //disable our nroaml vectors vbo at index 2 in the vao
+        glDisableVertexAttribArray(2); //disable our normal vectors vbo at index 2 in the vao
         glBindVertexArray(0);
         glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    //Cleanup Method
+    public void cleanup() {
+
+        //Delete Buffers
+        this.deleteBuffers();
+
+        //Cleanup texture
+        this.material.cleanup();
+    }
+
+    //Buffer Deletion Method
+    public void deleteBuffers() {
+
+        //Disable VAO
+        glDisableVertexAttribArray(0);
+
+        //Delete VBOs, VAO
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        for (int vboID : this.vboIDs) glDeleteBuffers(vboID);
+        glBindVertexArray(0);
+        glDeleteVertexArrays(this.vaoID);
     }
 }

@@ -9,7 +9,7 @@ public class Main {
         try {
             boolean vSync = true;
             IGameLogic gameLogic = new Game();
-            GameEngine gameEngine = new GameEngine("LWJGL Learning", 600, 480, vSync, gameLogic);
+            GameEngine gameEngine = new GameEngine("LWJGL Learning", 1280, 720, vSync, gameLogic);
             gameEngine.start();
         } catch (Exception e) {
             e.printStackTrace();

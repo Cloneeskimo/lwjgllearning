@@ -10,7 +10,7 @@ import java.util.Scanner;
 public class Utils {
 
     //A method used to retrieve the contents of a file based on the class path
-    public static String loadResources(String fileName) throws Exception {
+    public static String loadResource(String fileName) throws Exception {
         String result;
         try (InputStream in = Class.forName(Utils.class.getName()).getResourceAsStream(fileName);
              Scanner scanner = new Scanner(in, "UTF-8")) {
@@ -27,5 +27,13 @@ public class Utils {
             while ((line = in.readLine()) != null) file.add(line);
         }
         return file;
+    }
+
+    //A method used to convert a list to an array
+    public static float[] listToArray(List<Float> list) {
+        int size = list != null ? list.size() : 0;
+        float[] a = new float[size];
+        for (int i = 0; i < size; i++) a[i] = list.get(i);
+        return a;
     }
 }

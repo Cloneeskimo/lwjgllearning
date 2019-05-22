@@ -4,12 +4,14 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 
+import engine.gameitem.GameItem;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryUtil;
 
@@ -107,30 +109,51 @@ public class Mesh {
     //Render Method
     public void render() {
 
-        Texture texture = this.material.getTexture();
-        if (texture != null) {
+        //render this mesh singly
+        this.preRender();
+        glDrawElements(GL_TRIANGLES, this.vertexCount, GL_UNSIGNED_INT, 0);
+        this.postRender();
+    }
+
+    //Render List Method
+    public void renderList(List<GameItem> gameItems, Consumer<GameItem> consumer) {
+
+        //render multiple meshes
+        this.preRender();
+        for (GameItem gi : gameItems) {
+
+            //set up data required by game item
+            consumer.accept(gi);
+            glDrawElements(GL_TRIANGLES, this.vertexCount, GL_UNSIGNED_INT, 0);
+        }
+        this.postRender();
+    }
+
+    //Pre-Render
+    private void preRender() {
+
+        //bind texture
+        Texture t = this.material.getTexture();
+        if (t != null) {
             glActiveTexture(GL_TEXTURE0); //activate first texture bank
-            glBindTexture(GL_TEXTURE_2D, texture.getID()); //bind the texture
+            glBindTexture(GL_TEXTURE_2D, t.getID()); //bind texture
         }
 
-        //Bind to the VAO and enable the vbos within
-        glBindVertexArray(getVaoID());
-        glEnableVertexAttribArray(0); //enable our position vbo at index 0 in the vao
-        glEnableVertexAttribArray(1); //enable our texture coords vbo at index 1 in the vao
-        glEnableVertexAttribArray(2); //enable our normal vectors vbo at index 2 in the vao
+        //bind VAO and attribute arrays
+        glBindVertexArray(this.vaoID);
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
+    }
 
-        //Draw Mesh
-        //(@mode) - specifies the primitives for rendering, triangles in this case.
-        //(@count) - specifies the number of elements to be rendered.
-        //(@type) - specifies the type of value in the indices data, integers in this case
-        //(@indicies) - specifies the offset to apply to the indices data to start rendering
-        glDrawElements(GL_TRIANGLES, getVertexCount(), GL_UNSIGNED_INT, 0);
+    //Post-Render
+    private void postRender() {
 
-        //Restore state (unbind)
-        glDisableVertexAttribArray(0); //disable our position vbo at index 0 in the vao
-        glDisableVertexAttribArray(1); //disable our texture coords vbo at index 1 in the vao
-        glDisableVertexAttribArray(2); //disable our normal vectors vbo at index 2 in the vao
-        glBindVertexArray(0);
+        //restore state
+        glDisableVertexAttribArray(this.vaoID);
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 

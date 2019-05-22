@@ -8,21 +8,29 @@ public class Transformation {
 
     //Data
     private final Matrix4f projection;
+    private final Matrix4f model;
     private final Matrix4f view;
     private final Matrix4f modelView;
     private final Matrix4f ortho;
+    private final Matrix4f orthoModel;
 
     //Constructor
     public Transformation() {
         this.projection = new Matrix4f();
+        this.model = new Matrix4f();
         this.view = new Matrix4f();
         this.modelView = new Matrix4f();
         this.ortho = new Matrix4f();
+        this.orthoModel = new Matrix4f();
     }
+
+    //Accessors
+    public Matrix4f getProjectionMatrix() { return this.projection; }
+    public Matrix4f getViewMatrix() { return this.view; }
 
     //Projection Matrix
     //The projection matrix projects world coordinates into screen coordinates
-    public final Matrix4f getProjectionMatrix(float fov, float width, float height, float zNear, float zFar) {
+    public Matrix4f buildProjectionMatrix(float fov, float width, float height, float zNear, float zFar) {
 
         //calculate aspect ratio and then the projection matrix
         float aspectRatio = width / height;
@@ -32,7 +40,7 @@ public class Transformation {
 
     //View Matrix
     //The view matrix transforms items from the world into coordinates relative to a given camera
-    public Matrix4f getViewMatrix(Camera camera) {
+    public Matrix4f buildViewMatrix(Camera camera) {
 
         //get camera position and rotation
         Vector3f cameraPos = camera.getPosition();
@@ -49,7 +57,7 @@ public class Transformation {
     }
 
     //Orthographic Projection Matrix
-    public final Matrix4f getOrthoProjectionMatrix(float left, float right, float bottom, float top) {
+    public final Matrix4f buildOrthoProjectionMatrix(float left, float right, float bottom, float top) {
         this.ortho.identity();
         this.ortho.setOrtho2D(left, right, bottom, top);
         return this.ortho;
@@ -57,32 +65,30 @@ public class Transformation {
 
     //Model View Matrix
     //is a combination of worldMatrix and viewMatrix for a single GameItem
-    public Matrix4f getModelViewMatrix(GameItem gameItem, Matrix4f viewMatrix) {
+    public Matrix4f buildModelViewMatrix(GameItem gameItem, Matrix4f viewMatrix) {
 
         //world matrix
         Vector3f gameItemRotation = gameItem.getRotation();
-        this.modelView.identity().translate(gameItem.getPosition());
-        this.modelView.rotateX((float)Math.toRadians(-gameItemRotation.x));
-        this.modelView.rotateY((float)Math.toRadians(-gameItemRotation.y));
-        this.modelView.rotateZ((float)Math.toRadians(-gameItemRotation.z));
-        this.modelView.scale(gameItem.getScale());
+        this.model.identity().translate(gameItem.getPosition());
+        this.model.rotateX((float)Math.toRadians(-gameItemRotation.x));
+        this.model.rotateY((float)Math.toRadians(-gameItemRotation.y));
+        this.model.rotateZ((float)Math.toRadians(-gameItemRotation.z));
+        this.model.scale(gameItem.getScale());
 
         //view matrix
-        Matrix4f viewCurr = new Matrix4f(viewMatrix);
-        return viewCurr.mul(this.modelView); //Model View Matrix (view * world)
+        this.modelView.set(this.view);
+        return this.modelView.mul(this.model);
     }
 
     //Orthographic Projection Model Matrix
-    public Matrix4f getOrthoProjectionModelMatrix(GameItem gameItem, Matrix4f orthoProjectionMatrix) {
+    public Matrix4f buildOrthoProjModelMatrix(GameItem gameItem, Matrix4f orthoProjectionMatrix) {
         Vector3f rotation = gameItem.getRotation();
-        Matrix4f modelMatrix = new Matrix4f();
-        modelMatrix.identity().translate(gameItem.getPosition()).
+        this.model.identity().translate(gameItem.getPosition()).
                 rotateX((float)Math.toRadians(-rotation.x)).
                 rotateY((float)Math.toRadians(-rotation.y)).
                 rotateZ((float)Math.toRadians(-rotation.z)).
                 scale(gameItem.getScale());
-        Matrix4f orthoProjectionCopy = new Matrix4f(orthoProjectionMatrix);
-        orthoProjectionCopy.mul(modelMatrix);
-        return orthoProjectionCopy;
+        this.orthoModel.set(this.ortho);
+        return this.orthoModel.mul(this.model);
     }
 }

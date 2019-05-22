@@ -15,6 +15,7 @@ import org.lwjgl.system.CallbackI;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -58,7 +59,7 @@ public class Game implements IGameLogic {
 
         //settings
         float blockScale = 0.5f;
-        float skyBoxScale = 10.0f;
+        float skyBoxScale = 50.0f;
         float extension = 2.0f;
 
         //pre-calculations
@@ -100,6 +101,7 @@ public class Game implements IGameLogic {
 
         //create hud
         this.hud = new Hud("FPS: N/A POS: N/A");
+        this.hud.updateSize(window);
 
         //set camera position
         camera.getPosition().x = 0.65f;
@@ -195,8 +197,8 @@ public class Game implements IGameLogic {
     @Override
     public void cleanup() {
         this.renderer.cleanup();
-        GameItem[] gameItems = this.scene.getGameItems();
-        for (GameItem gameItem : gameItems) gameItem.cleanup();
+        Map<Mesh, List<GameItem>> meshMap = this.scene.getMeshMap();
+        for (Mesh mesh : meshMap.keySet()) mesh.cleanup();
         this.hud.cleanup();
     }
 }

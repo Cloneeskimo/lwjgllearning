@@ -18,6 +18,7 @@ import org.lwjgl.BufferUtils;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.List;
+import java.util.Map;
 
 import static org.lwjgl.glfw.GLFW.glfwGetWindowSize;
 import static org.lwjgl.opengl.GL11.*;
@@ -120,9 +121,13 @@ public class Renderer {
             window.setResized(false);
         }
 
+        //update projection and view matrix once per render cycle
+        this.transformation.buildProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
+        this.transformation.buildViewMatrix(camera);
+
         //render
-        this.renderSkyBox(window, camera, scene);
         this.renderScene(window, camera, scene);
+        this.renderSkyBox(window, camera, scene);
         this.renderHud(window, hud);
     }
 
@@ -137,17 +142,15 @@ public class Renderer {
         this.skyBoxShaderProgram.setUniform("ambientLight", scene.getLighting().getAmbientLight());
 
         //set projection matrix
-        Matrix4f projectionMatrix = transformation.getProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
-        this.skyBoxShaderProgram.setUniform("projection", projectionMatrix);
+        this.skyBoxShaderProgram.setUniform("projection", this.transformation.getProjectionMatrix());
 
         //set model view matrix
         SkyBox skyBox = scene.getSkyBox();
-        Matrix4f viewMatrix = transformation.getViewMatrix(camera);
+        Matrix4f viewMatrix = this.transformation.getViewMatrix();
         viewMatrix.m30(0); //we don't want the skybox to translate, but we
         viewMatrix.m31(0); //do want it to rotate. we acquire this effect
         viewMatrix.m32(0); //by setting these values to 0
-        Matrix4f modelViewMatrix = transformation.getModelViewMatrix(skyBox, viewMatrix);
-        this.skyBoxShaderProgram.setUniform("modelView", modelViewMatrix);
+        this.skyBoxShaderProgram.setUniform("modelView", this.transformation.buildModelViewMatrix(skyBox, viewMatrix));
 
         //render
         scene.getSkyBox().getMesh().render();
@@ -167,31 +170,23 @@ public class Renderer {
 
         //projection transformation (same for each GameItem)
         //we update this every render call to allow for resizing
-        Matrix4f projectionMatrix = transformation.getProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
-        sceneShaderProgram.setUniform("projection", projectionMatrix);
+        sceneShaderProgram.setUniform("projection", this.transformation.getProjectionMatrix());
 
         //view transformation (same for each GameItem, changes depending on camera)
-        Matrix4f viewMatrix = transformation.getViewMatrix(camera);
+        Matrix4f viewMatrix = transformation.getViewMatrix();
 
         //render lights
         renderLights(viewMatrix, scene.getLighting());
 
-        //world transformation (different for each GameItem)
-        GameItem[] gameItems = scene.getGameItems();
-        for (GameItem gameItem : gameItems) {
+        //loop through each mesh and render each game item for that mesh
+        Map<Mesh, List<GameItem>> meshMap = scene.getMeshMap();
+        for (Mesh m : meshMap.keySet()) {
 
-            //Get reference to gameItem's mesh
-            Mesh mesh = gameItem.getMesh();
-
-            //Set model view matrix
-            Matrix4f modelViewMatrix = transformation.getModelViewMatrix(gameItem, viewMatrix);
-            sceneShaderProgram.setUniform("modelView", modelViewMatrix);
-
-            //Set material uniform
-            sceneShaderProgram.setUniform("material", mesh.getMaterial());
-
-            //Render mesh
-            mesh.render();
+            //set material then set game item specifics using a lambda
+            this.sceneShaderProgram.setUniform("material", m.getMaterial());
+            m.renderList(meshMap.get(m), (GameItem gi) -> {
+                this.sceneShaderProgram.setUniform("modelView", this.transformation.buildModelViewMatrix(gi, viewMatrix));
+            });
         }
 
         //Unbind shader program
@@ -256,13 +251,13 @@ public class Renderer {
         hudShaderProgram.bind();
 
         //calculate orthographic projection matrix
-        Matrix4f ortho = transformation.getOrthoProjectionMatrix(0, window.getWidth(), window.getHeight(), 0);
+        Matrix4f ortho = this.transformation.buildOrthoProjectionMatrix(0, window.getWidth(), window.getHeight(), 0);
 
         //render each hud item
         for (GameItem gameItem : hud.getGameItems()) {
 
             //calculate model matrix and set uniforms
-            Matrix4f projectionModelMatrix = this.transformation.getOrthoProjectionModelMatrix(gameItem, ortho);
+            Matrix4f projectionModelMatrix = this.transformation.buildOrthoProjModelMatrix(gameItem, ortho);
             this.hudShaderProgram.setUniform("projectionModel", projectionModelMatrix);
             this.hudShaderProgram.setUniform("color", gameItem.getMesh().getMaterial().getAmbientColor());
             this.hudShaderProgram.setUniform("hasTexture", gameItem.getMesh().getMaterial().isTextured() ? 1 : 0);

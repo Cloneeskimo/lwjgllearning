@@ -1,10 +1,8 @@
 package game;
 
-import engine.GameEngine;
+import engine.*;
 import engine.gameitem.GameItem;
-import engine.IGameLogic;
-import engine.MouseInput;
-import engine.Window;
+import engine.gameitem.SkyBox;
 import engine.graphics.*;
 import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.LightPoint;
@@ -23,89 +21,107 @@ import static org.lwjgl.glfw.GLFW.*;
 public class Game implements IGameLogic {
 
     //Static Data
-    private static final float MOUSE_SENSITIVITY = 0.4f;
-    private static final float CAMERA_SPEED = 0.15f;
-    private static final float SUN_SPEED = 1.1f;
+    private static final float MOUSE_SENSITIVITY = 0.45f;
+    private static final float CAMERA_SPEED = 0.2f;
 
     //Non-Lighting Instance Data
     private final Vector3f cameraVelocity;
     private final Renderer renderer;
     private final Camera camera;
-    private List<GameItem> gameItems;
-    private Hud hud;
 
-    //Lighting Data
-    private float spotLightAngleVelocity = 1;
+    //Scene and HUD
+    private Scene scene;
+    private Hud hud;
     private float directionalLightAngle;
-    private float spotLightAngle = 0;
-    private SceneLighting sceneLighting;
 
     //Constructor
     public Game() {
         this.renderer = new Renderer();
         this.camera = new Camera();
         this.cameraVelocity = new Vector3f();
-        this.gameItems = new ArrayList<>();
         this.directionalLightAngle = -90;
     }
 
+    //Initialization Method
     @Override
     public void init(Window window) throws Exception {
 
-        //initialize renderer
+        //initialize renderer and create scene
         this.renderer.init(window);
+        this.scene = new Scene();
 
-        //set reflectance
-        float reflectance = 1f;
+        //setup blocks
+        float r = 1f;
+        Mesh m = OBJLoader.loadMesh("/models/cube.obj");
+        Texture t = new Texture("/textures/grass.png");
+        m.setMaterial(new Material(t, r));
 
-        //create grass block
-        Mesh grassMesh = OBJLoader.loadMesh("/models/cube.obj");
-        Texture grassTexture = new Texture("/textures/grass.png");
-        Material grassMaterial = new Material(grassTexture, reflectance);
-        grassMesh.setMaterial(grassMaterial);
-        GameItem grassBlock = new GameItem(grassMesh);
-        grassBlock.setScale(0.5f);
-        grassBlock.setPosition(0, 0, -2);
-        this.gameItems.add(grassBlock);
+        //settings
+        float blockScale = 0.5f;
+        float skyBoxScale = 10.0f;
+        float extension = 2.0f;
 
-        //create scene lighting and set ambient light
-        this.sceneLighting = new SceneLighting();
-        this.sceneLighting.setAmbientLight(new Vector3f(0.3f, 0.3f, 0.3f));
+        //pre-calculations
+        float startx = extension * (-skyBoxScale + blockScale);
+        float startz = extension * (skyBoxScale - blockScale);
+        float starty = -1.0f;
+        float inc = blockScale * 2;
 
-        //setup light point
-        Vector3f lightPosition = new Vector3f(0, 1, 1);
-        float lightIntensity = 1.0f;
-        LightPoint lightPoint = new LightPoint(new Vector3f(1, 1, 0), lightPosition, lightIntensity);
-        lightPoint.setAttenuation(new LightPoint.Attenuation(0.0f, 0.0f, 1.0f));
-        this.sceneLighting.setLightPoints(new LightPoint[]{ lightPoint });
+        //loop settings
+        float posx = startx;
+        float posz = startz;
+        float incy = 0.0f;
+        int NUM_ROWS = (int)(extension * skyBoxScale * 2 /inc);
+        int NUM_COLS = (int)(extension * skyBoxScale * 2 /inc);
+        GameItem[] gameItems = new GameItem[NUM_ROWS * NUM_COLS];
+        for (int i = 0; i < NUM_ROWS; i++) {
+            for (int j = 0; j < NUM_COLS; j++) {
+                GameItem gameItem = new GameItem(m);
+                gameItem.setScale(blockScale);
+                incy = Math.random() > 0.9f ? blockScale * 2 : 0f;
+                gameItem.setPosition(posx, starty + incy, posz);
+                gameItems[i * NUM_COLS + j] = gameItem;
 
-        //setup light point object
-        Mesh lightMesh = OBJLoader.loadMesh("/models/cube.obj");
-        Material lightMaterial = new Material(new Vector4f(1.0f, 1.0f, 0.0f, 0.5f), reflectance);
-        lightMesh.setMaterial(lightMaterial);
-        GameItem lightPointItem = new GameItem(lightMesh);
-        lightPointItem.setScale(0.2f);
-        lightPointItem.setPosition(0, 1, 1);
-        this.gameItems.add(lightPointItem);
+                posx += inc;
+            }
 
-        //setup spot lights
-        lightPosition = new Vector3f(0, 0, 10);
-        lightPoint = new LightPoint(new Vector3f(1, 1, 0), lightPosition, lightIntensity);
-        lightPoint.setAttenuation(new LightPoint.Attenuation(0.0f, 0.0f, 0.02f));
-        Vector3f lightDirection = new Vector3f(0, 0, -1);
-        float lightCutoff = (float)Math.cos(Math.toRadians(140));
-        SpotLight spotLight = new SpotLight(lightPoint, lightDirection, lightCutoff);
-        this.sceneLighting.setSpotLights(new SpotLight[]{ spotLight, new SpotLight(spotLight) });
+            posx = startx;
+            posz -= inc;
+        }
+        scene.setGameItems(gameItems);
 
-        //setup directional light
-        lightPosition = new Vector3f(-1, 0, 0);
-        this.sceneLighting.setDirectionalLight(new DirectionalLight(new Vector3f(1, 1, 1), lightPosition, lightIntensity));
+        //setup skybox
+        SkyBox skyBox = new SkyBox("/models/skybox.obj", "/textures/skybox.png");
+        skyBox.setScale(skyBoxScale);
+        scene.setSkyBox(skyBox);
+
+        //setup lights
+        setupLights();
 
         //create hud
-        this.hud = new Hud("FPS: N/A");
-        this.hud.updateSize(window);
+        this.hud = new Hud("FPS: N/A POS: N/A");
+
+        //set camera position
+        camera.getPosition().x = 0.65f;
+        camera.getPosition().y = 1.15f;
+        camera.getPosition().z = 4.34f;
     }
 
+    //Light Setup Method
+    private void setupLights() {
+
+        //create lighting
+        SceneLighting lighting = new SceneLighting();
+        this.scene.setLighting(lighting);
+
+        //ambient light
+        lighting.setAmbientLight(new Vector3f(1.0f, 1.0f, 1.0f));
+
+        //directional light
+        lighting.setDirectionalLight(new DirectionalLight(new Vector3f(1, 1, 1), new Vector3f(-1, 0, 0), 1.0f));
+    }
+
+    //Input Method
     @Override
     public void input(Window window) {
 
@@ -117,24 +133,9 @@ public class Game implements IGameLogic {
         if (window.isKeyPressed(GLFW_KEY_D)) cameraVelocity.x += 1;
         if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraVelocity.y += 1;
         if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraVelocity.y -= 1;
-
-        //light point movement
-        Vector3f lightPointPos = this.sceneLighting.getLightPoints()[0].getPosition();
-        if (window.isKeyPressed(GLFW_KEY_N)) {
-            this.gameItems.get(1).getPosition().z += 0.1f;
-            lightPointPos.z += 0.1f;
-        }
-        if (window.isKeyPressed(GLFW_KEY_M)) {
-            this.gameItems.get(1).getPosition().z -= 0.1f;
-            lightPointPos.z -= 0.1f;
-        }
-
-        //spot light movement
-        Vector3f spotLightPos = this.sceneLighting.getSpotLights()[0].getLightPoint().getPosition();
-        if (window.isKeyPressed(GLFW_KEY_J)) spotLightPos.z += 0.1f;
-        if (window.isKeyPressed(GLFW_KEY_K)) spotLightPos.z -= 0.1f;
     }
 
+    //Update Method
     @Override
     public void update(float interval, MouseInput mouseInput) {
 
@@ -148,53 +149,54 @@ public class Game implements IGameLogic {
             this.hud.setCompassRotation(camera.getRotation().y);
         }
 
-        //update spot light direction
-        spotLightAngle += spotLightAngleVelocity * 0.05f;
-        if (spotLightAngle > 2) spotLightAngleVelocity = -1;
-        if (spotLightAngle < -2) spotLightAngleVelocity = 1;
-        double spotLightAngleRad = Math.toRadians(spotLightAngle);
-        Vector3f coneDir = this.sceneLighting.getSpotLights()[0].getDirection();
-        coneDir.y = (float)Math.sin(spotLightAngleRad);
-
         //update directional light color and intensity
-        DirectionalLight directionalLight = this.sceneLighting.getDirectionalLight();
-        this.directionalLightAngle += SUN_SPEED;
+        SceneLighting lighting = this.scene.getLighting();
+        DirectionalLight directionalLight = lighting.getDirectionalLight();
+        this.directionalLightAngle += 0.3f;
         if (this.directionalLightAngle > 90) {
             directionalLight.setIntensity(0);
             if (this.directionalLightAngle > 360) {
                 this.directionalLightAngle = -90;
             }
-        } else if (this.directionalLightAngle <= -80 || this.directionalLightAngle >= 80) {
-            float factor = 1 - (float)(Math.abs(this.directionalLightAngle) - 80) / 10.0f;
+            lighting.getAmbientLight().set(0.4f, 0.4f, 0.4f);
+        } else if (this.directionalLightAngle <= -70 || this.directionalLightAngle >= 70) {
+            float factor = 1 - (float)(Math.abs(this.directionalLightAngle) - 70) / 20.0f;
+            float ambientFactor = Math.max(factor - 0.1f, 0.4f);
+            lighting.getAmbientLight().set(ambientFactor, ambientFactor, ambientFactor);
             directionalLight.setIntensity(factor);
             directionalLight.getColor().y = Math.max(factor, 0.9f);
             directionalLight.getColor().z = Math.max(factor, 0.5f);
         } else {
+            lighting.getAmbientLight().set(0.9f, 0.9f, 0.9f);
             directionalLight.setIntensity(1);
             directionalLight.getColor().x = 1;
             directionalLight.getColor().y = 1;
             directionalLight.getColor().z = 1;
         }
 
-        //update sun direction
+        //update directional light direction
         double angle = Math.toRadians(this.directionalLightAngle);
         directionalLight.getDirection().x = (float) Math.sin(angle);
         directionalLight.getDirection().y = (float) Math.cos(angle);
 
-        //set text
-        this.hud.setStatusText("FPS: " + GameEngine.CURRENT_FPS);
+        //update text
+        Vector3f cameraPos = this.camera.getPosition();
+        this.hud.setStatusText("FPS: " + GameEngine.CURRENT_FPS + " POS: " + cameraPos.x + ", " + cameraPos.y + ", " + cameraPos.z);
     }
 
+    //Render Method
     @Override
     public void render(Window window) {
         if (window.isResized()) this.hud.updateSize(window);
-        renderer.render(window, camera, this.gameItems, this.sceneLighting, this.hud);
+        this.renderer.render(window, this.camera, this.scene, this.hud);
     }
 
+    //Cleanup Method
     @Override
     public void cleanup() {
         this.renderer.cleanup();
-        for (GameItem gameItem : this.gameItems) gameItem.cleanup();
+        GameItem[] gameItems = this.scene.getGameItems();
+        for (GameItem gameItem : gameItems) gameItem.cleanup();
         this.hud.cleanup();
     }
 }

@@ -1,9 +1,11 @@
 package engine.graphics;
 
 import engine.IHud;
+import engine.Scene;
 import engine.gameitem.GameItem;
 import engine.Utils;
 import engine.Window;
+import engine.gameitem.SkyBox;
 import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.LightPoint;
 import engine.graphics.light.SceneLighting;
@@ -31,6 +33,7 @@ public class Renderer {
 
     //Instance Data
     private Transformation transformation;
+    private ShaderProgram skyBoxShaderProgram;
     private ShaderProgram sceneShaderProgram;
     private ShaderProgram hudShaderProgram;
     private float specularPower;
@@ -43,8 +46,25 @@ public class Renderer {
 
     //Initializer
     public void init(Window window) throws Exception {
+        this.setupSkyBoxShader();
         this.setupSceneShader();
         this.setupHudShader();
+    }
+
+    //SkyBox Shader Setup Method
+    private void setupSkyBoxShader() throws Exception {
+
+        //create shader program
+        this.skyBoxShaderProgram = new ShaderProgram();
+        this.skyBoxShaderProgram.createVertexShader(Utils.loadResource("/shaders/skyboxV.glsl"));
+        this.skyBoxShaderProgram.createFragmentShader(Utils.loadResource("/shaders/skyboxF.glsl"));
+        this.skyBoxShaderProgram.link();
+
+        //create uniforms
+        this.skyBoxShaderProgram.createUniform("projection");
+        this.skyBoxShaderProgram.createUniform("modelView");
+        this.skyBoxShaderProgram.createUniform("textureSampler");
+        this.skyBoxShaderProgram.createUniform("ambientLight");
     }
 
     //Scene Shader Setup Method
@@ -89,7 +109,7 @@ public class Renderer {
     public void clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
 
     //Render Method
-    public void render(Window window, Camera camera, List<GameItem> gameItems, SceneLighting sceneLighting, IHud hud) {
+    public void render(Window window, Camera camera, Scene scene, IHud hud) {
 
         //clear screen
         this.clear();
@@ -101,12 +121,43 @@ public class Renderer {
         }
 
         //render
-        this.renderScene(window, camera, gameItems, sceneLighting);
+        this.renderSkyBox(window, camera, scene);
+        this.renderScene(window, camera, scene);
         this.renderHud(window, hud);
     }
 
+    //SkyBox Rendering Method
+    private void renderSkyBox(Window window, Camera camera, Scene scene) {
+
+        //bind shader program
+        this.skyBoxShaderProgram.bind();
+
+        //set texture sampler and ambient light uniform
+        this.skyBoxShaderProgram.setUniform("textureSampler", 0);
+        this.skyBoxShaderProgram.setUniform("ambientLight", scene.getLighting().getAmbientLight());
+
+        //set projection matrix
+        Matrix4f projectionMatrix = transformation.getProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
+        this.skyBoxShaderProgram.setUniform("projection", projectionMatrix);
+
+        //set model view matrix
+        SkyBox skyBox = scene.getSkyBox();
+        Matrix4f viewMatrix = transformation.getViewMatrix(camera);
+        viewMatrix.m30(0); //we don't want the skybox to translate, but we
+        viewMatrix.m31(0); //do want it to rotate. we acquire this effect
+        viewMatrix.m32(0); //by setting these values to 0
+        Matrix4f modelViewMatrix = transformation.getModelViewMatrix(skyBox, viewMatrix);
+        this.skyBoxShaderProgram.setUniform("modelView", modelViewMatrix);
+
+        //render
+        scene.getSkyBox().getMesh().render();
+
+        //unbind
+        this.skyBoxShaderProgram.unbind();
+    }
+
     //Scene Rendering Method
-    private void renderScene(Window window, Camera camera, List<GameItem> gameItems, SceneLighting lighting) {
+    private void renderScene(Window window, Camera camera, Scene scene) {
 
         //bind shader program
         sceneShaderProgram.bind();
@@ -123,9 +174,10 @@ public class Renderer {
         Matrix4f viewMatrix = transformation.getViewMatrix(camera);
 
         //render lights
-        renderLights(viewMatrix, lighting);
+        renderLights(viewMatrix, scene.getLighting());
 
         //world transformation (different for each GameItem)
+        GameItem[] gameItems = scene.getGameItems();
         for (GameItem gameItem : gameItems) {
 
             //Get reference to gameItem's mesh

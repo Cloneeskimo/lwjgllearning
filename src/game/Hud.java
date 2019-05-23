@@ -15,7 +15,7 @@ import java.awt.*;
 public class Hud implements IHud {
 
     //Static Data
-    private static final Font FONT = new Font("Arial", Font.PLAIN, 40);
+    private static final Font FONT = new Font("Times New Roman", Font.PLAIN, 30);
     private static final String CHARSET = "ISO-8859-1";
 
     //Instance Data

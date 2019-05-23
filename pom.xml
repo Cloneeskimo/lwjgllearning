@@ -6,7 +6,7 @@
 
     <groupId>com.jacoboaks</groupId>
     <artifactId>lwjgllearning</artifactId>
-    <version>c13p1</version>
+    <version>c14</version>
     <build>
         <plugins>
             <plugin>
@@ -22,7 +22,7 @@
 
     <properties>
         <lwjgl.version>3.2.1</lwjgl.version>
-        <native.target>natives-macos</native.target>
+        <native.target>natives-windows</native.target>
         <joml.version>1.9.6</joml.version>
         <pngdecoder.version>1.0</pngdecoder.version>
     </properties>

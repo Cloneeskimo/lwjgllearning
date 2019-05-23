@@ -3,7 +3,6 @@ package engine.graphics;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -43,6 +42,8 @@ public class FontTexture {
         //get characters and initialize width and height
         String allChars = getAllAvailableChars();
         this.width = this.height = 0;
+
+        int ww = fontMetrics.charWidth(2);
 
         //loop through each character
         for (char c : allChars.toCharArray()) {

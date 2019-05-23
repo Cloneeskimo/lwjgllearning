@@ -3,6 +3,7 @@ package game;
 import engine.*;
 import engine.gameitem.GameItem;
 import engine.gameitem.SkyBox;
+import engine.gameitem.Terrain;
 import engine.graphics.*;
 import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.LightPoint;
@@ -23,7 +24,7 @@ public class Game implements IGameLogic {
 
     //Static Data
     private static final float MOUSE_SENSITIVITY = 0.45f;
-    private static final float CAMERA_SPEED = 0.2f;
+    private static final float CAMERA_SPEED = 0.05f;
 
     //Non-Lighting Instance Data
     private final Vector3f cameraVelocity;
@@ -51,47 +52,17 @@ public class Game implements IGameLogic {
         this.renderer.init(window);
         this.scene = new Scene();
 
-        //setup blocks
-        float r = 1f;
-        Mesh m = OBJLoader.loadMesh("/models/cube.obj");
-        Texture t = new Texture("/textures/grass.png");
-        m.setMaterial(new Material(t, r));
+        //create terrain
+        float terrainScale = 15;
+        int terrainSize = 3;
+        float minY = -0.1f;
+        float maxY = 0.1f;
+        int textureInc = 40;
+        Terrain terrain = new Terrain(terrainSize, terrainScale, minY, maxY, "/textures/heightmap.png", "/textures/terrain.png", textureInc);
+        this.scene.setGameItems(terrain.getGameItems());
 
-        //settings
-        float blockScale = 0.5f;
+        //create sky box
         float skyBoxScale = 50.0f;
-        float extension = 2.0f;
-
-        //pre-calculations
-        float startx = extension * (-skyBoxScale + blockScale);
-        float startz = extension * (skyBoxScale - blockScale);
-        float starty = -1.0f;
-        float inc = blockScale * 2;
-
-        //loop settings
-        float posx = startx;
-        float posz = startz;
-        float incy = 0.0f;
-        int NUM_ROWS = (int)(extension * skyBoxScale * 2 /inc);
-        int NUM_COLS = (int)(extension * skyBoxScale * 2 /inc);
-        GameItem[] gameItems = new GameItem[NUM_ROWS * NUM_COLS];
-        for (int i = 0; i < NUM_ROWS; i++) {
-            for (int j = 0; j < NUM_COLS; j++) {
-                GameItem gameItem = new GameItem(m);
-                gameItem.setScale(blockScale);
-                incy = Math.random() > 0.9f ? blockScale * 2 : 0f;
-                gameItem.setPosition(posx, starty + incy, posz);
-                gameItems[i * NUM_COLS + j] = gameItem;
-
-                posx += inc;
-            }
-
-            posx = startx;
-            posz -= inc;
-        }
-        scene.setGameItems(gameItems);
-
-        //setup skybox
         SkyBox skyBox = new SkyBox("/models/skybox.obj", "/textures/skybox.png");
         skyBox.setScale(skyBoxScale);
         scene.setSkyBox(skyBox);
@@ -103,10 +74,10 @@ public class Game implements IGameLogic {
         this.hud = new Hud("FPS: N/A POS: N/A");
         this.hud.updateSize(window);
 
-        //set camera position
-        camera.getPosition().x = 0.65f;
-        camera.getPosition().y = 1.15f;
-        camera.getPosition().z = 4.34f;
+        //move camera
+        this.camera.getPosition().x = 10.0f;
+        this.camera.getPosition().y = -0.2f;
+        this.camera.getPosition().z = 0.0f;
     }
 
     //Light Setup Method

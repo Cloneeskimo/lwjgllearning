@@ -6,15 +6,10 @@ import engine.gameitem.SkyBox;
 import engine.gameitem.Terrain;
 import engine.graphics.*;
 import engine.graphics.light.DirectionalLight;
-import engine.graphics.light.LightPoint;
 import engine.graphics.light.SceneLighting;
-import engine.graphics.light.SpotLight;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
-import org.joml.Vector4f;
-import org.lwjgl.system.CallbackI;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +19,7 @@ public class Game implements IGameLogic {
 
     //Static Data
     private static final float MOUSE_SENSITIVITY = 0.45f;
-    private static final float CAMERA_SPEED = 0.05f;
+    private static final float CAMERA_SPEED = 0.2f;
 
     //Non-Lighting Instance Data
     private final Vector3f cameraVelocity;
@@ -61,6 +56,34 @@ public class Game implements IGameLogic {
         Terrain terrain = new Terrain(terrainSize, terrainScale, minY, maxY, "/textures/heightmap.png", "/textures/terrain.png", textureInc);
         this.scene.setGameItems(terrain.getGameItems());
 
+        Mesh me = OBJLoader.loadMesh("/models/dentedwall.obj");
+        Material ma = new Material(new Texture("/textures/templewall.png"), 0.3f);
+        me.setMaterial(ma);
+        GameItem c = new GameItem(me);
+        c.setPosition(1, 0, 0);
+        scene.setGameItems(new GameItem[]{ c });
+
+        me = OBJLoader.loadMesh("/models/dentedwall.obj");
+        ma = new Material(new Texture("/textures/templewall.png"), 0.3f);
+        me.setMaterial(ma);
+        c = new GameItem(me);
+        c.setPosition(2, 0, 0);
+        scene.setGameItems(new GameItem[]{ c });
+
+        me = OBJLoader.loadMesh("/models/dentedwall.obj");
+        ma = new Material(new Texture("/textures/templewall.png"), 0.3f);
+        me.setMaterial(ma);
+        c = new GameItem(me);
+        c.setPosition(3, 0, 0);
+        scene.setGameItems(new GameItem[]{ c });
+
+        me = OBJLoader.loadMesh("/models/pillar.obj");
+        ma = new Material(new Texture("/textures/templepillar.png"), 0.3f);
+        me.setMaterial(ma);
+        c = new GameItem(me);
+        c.setPosition(2, 0, 2);
+        scene.setGameItems(new GameItem[]{ c });
+
         //create sky box
         float skyBoxScale = 50.0f;
         SkyBox skyBox = new SkyBox("/models/skybox.obj", "/textures/skybox.png");
@@ -73,11 +96,6 @@ public class Game implements IGameLogic {
         //create hud
         this.hud = new Hud("FPS: N/A POS: N/A");
         this.hud.updateSize(window);
-
-        //move camera
-        this.camera.getPosition().x = 10.0f;
-        this.camera.getPosition().y = -0.2f;
-        this.camera.getPosition().z = 0.0f;
     }
 
     //Light Setup Method
@@ -106,6 +124,7 @@ public class Game implements IGameLogic {
         if (window.isKeyPressed(GLFW_KEY_D)) cameraVelocity.x += 1;
         if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraVelocity.y += 1;
         if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraVelocity.y -= 1;
+        if (window.isKeyPressed(GLFW_KEY_3)) this.directionalLightAngle = -90;
     }
 
     //Update Method
@@ -125,11 +144,11 @@ public class Game implements IGameLogic {
         //update directional light color and intensity
         SceneLighting lighting = this.scene.getLighting();
         DirectionalLight directionalLight = lighting.getDirectionalLight();
-        this.directionalLightAngle += 0.3f;
+        this.directionalLightAngle += 0.1f;
         if (this.directionalLightAngle > 90) {
             directionalLight.setIntensity(0);
             if (this.directionalLightAngle > 360) {
-                this.directionalLightAngle = -90;
+                this.directionalLightAngle = -70;
             }
             lighting.getAmbientLight().set(0.4f, 0.4f, 0.4f);
         } else if (this.directionalLightAngle <= -70 || this.directionalLightAngle >= 70) {

@@ -19,36 +19,23 @@ public class HeightMap {
 
     //Static Data
     private static final int MAX_COLOR = 255 * 255 * 255;
-    private static final float STARTX = -0.5f;
-    private static final float STARTZ = -0.5f;
+    public static final float STARTX = -0.5f;
+    public static final float STARTZ = -0.5f;
 
     //Instance Data
     private final float minY, maxY;
     private final Mesh mesh;
+    private float[][] heights;
 
     //Constructor
-    public HeightMap(float minY, float maxY, String heightMapFile, String textureFile,  int textureInc) throws Exception {
+    public HeightMap(float minY, float maxY, ByteBuffer heightMapImage, int width, int height, String textureFile,  int textureInc) throws Exception {
 
         //set min and max y values
         this.minY = minY;
         this.maxY = maxY;
 
-        //load heightmap into a ByteBuffer instance
-        ByteBuffer buf = null;
-        int width, height;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer w = stack.mallocInt(1);
-            IntBuffer h = stack.mallocInt(1);
-            IntBuffer channelCount = stack.mallocInt(1);
-
-            URL url = Texture.class.getResource(heightMapFile);
-            File file = Paths.get(url.toURI()).toFile();
-            String filePath = file.getAbsolutePath();
-            buf = stbi_load(filePath, w, h, channelCount, 4);
-            if (buf == null) throw new Exception("Image file '" + filePath + "' unable to be loaded: " + stbi_failure_reason());
-            width = w.get();
-            height = h.get();
-        }
+        //create height array
+        this.heights = new float[height][width];
 
         //load heightmap texture and calculate x/z increments
         Texture texture = new Texture(textureFile);
@@ -66,7 +53,9 @@ public class HeightMap {
 
                 //create vertex
                 positions.add(STARTX + col * incx); //x
-                positions.add(this.getHeight(col, row, width, buf)); //y
+                float currentHeight = this.calculateHeight(col, row, width, heightMapImage);
+                positions.add(currentHeight); //y
+                this.heights[row][col] = currentHeight;
                 positions.add(STARTZ + row * incz); //z
 
                 //set texture coordinates
@@ -100,18 +89,21 @@ public class HeightMap {
         this.mesh = new Mesh(posArr, textureCoordinatesArr, normalsArr, indicesArr);
         Material material = new Material(texture, 0.0f);
         this.mesh.setMaterial(material);
-
-        //free image buffer memory
-        stbi_image_free(buf);
     }
 
     //Accessors
     public static float getXLength() { return 2 * Math.abs(-STARTX); }
     public static float getZLength() { return 2 * Math.abs(-STARTZ); }
     public Mesh getMesh() { return this.mesh; }
+    public float getHeight(int row, int col) {
+        if (row >= 0 && row < this.heights.length) {
+            if (col >= 0 && col < this.heights[row].length) return this.heights[row][col];
+        }
+        return 0;
+    }
 
     //Gets the height for a single pixel of a heightmap
-    private float getHeight(int x, int z, int width, ByteBuffer buf) {
+    private float calculateHeight(int x, int z, int width, ByteBuffer buf) {
         byte r = buf.get(x * 4 + 0 + z * 4 * width);
         byte g = buf.get(x * 4 + 1 * z * 4 * width);
         byte b = buf.get(x * 4 + 2 + z * 4 * width);

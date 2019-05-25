@@ -33,6 +33,7 @@ public class Game implements IGameLogic {
 
     //Scene and HUD
     private Scene scene;
+    private Terrain terrain;
     private Hud hud;
     private float directionalLightAngle;
 
@@ -58,8 +59,8 @@ public class Game implements IGameLogic {
         float minY = -0.1f;
         float maxY = 0.1f;
         int textureInc = 40;
-        Terrain terrain = new Terrain(terrainSize, terrainScale, minY, maxY, "/textures/heightmap.png", "/textures/terrain.png", textureInc);
-        this.scene.setGameItems(terrain.getGameItems());
+        this.terrain = new Terrain(terrainSize, terrainScale, minY, maxY, "/textures/heightmap.png", "/textures/terrain.png", textureInc);
+        this.scene.setGameItems(terrain.getChunks());
 
         //create sky box
         float skyBoxScale = 50.0f;
@@ -106,6 +107,7 @@ public class Game implements IGameLogic {
         if (window.isKeyPressed(GLFW_KEY_D)) cameraVelocity.x += 1;
         if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraVelocity.y += 1;
         if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraVelocity.y -= 1;
+        if (window.isKeyPressed(GLFW_KEY_3)) this.directionalLightAngle = -85;
     }
 
     //Update Method
@@ -113,7 +115,12 @@ public class Game implements IGameLogic {
     public void update(float interval, MouseInput mouseInput) {
 
         //update camera position
+        Vector3f prevPosition = new Vector3f(camera.getPosition());
         camera.movePosition(cameraVelocity.x * CAMERA_SPEED, cameraVelocity.y * CAMERA_SPEED, cameraVelocity.z * CAMERA_SPEED);
+        float height = this.terrain.getHeight(camera.getPosition());
+        if (camera.getPosition().y <= height) {
+            camera.setPosition(prevPosition);
+        }
 
         //update camera rotation and compass
         if (Window.MOUSE_GRABBED) {
@@ -154,7 +161,7 @@ public class Game implements IGameLogic {
 
         //update text
         Vector3f cameraPos = this.camera.getPosition();
-        this.hud.setStatusText("FPS: " + GameEngine.CURRENT_FPS + " POS: " + cameraPos.x + ", " + cameraPos.y + ", " + cameraPos.z);
+        this.hud.setStatusText("FPS: " + GameEngine.CURRENT_FPS + " POS: " + cameraPos.x + ", " + cameraPos.y + ", " + cameraPos.z + " HEIGHT: " + height);
     }
 
     //Render Method

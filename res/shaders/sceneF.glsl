@@ -43,6 +43,13 @@ struct SpotLight {
     float cutoff;
 };
 
+//Fog Struct
+struct Fog {
+    int activeFog;
+    vec3 color;
+    float density;
+};
+
 /*
     a material is defined by a set of colors (if we don't use texture to color the fragments)
     ambient, diffuse, specular components
@@ -64,10 +71,11 @@ uniform vec3 ambientLight;                      //a color which will affect ever
 uniform float specularPower;                    //exponent used in calculation specular light
 uniform Material material;                      //material characteristics
 
-//Light Object Uniforms
+//Light Object and Fog Uniforms
 uniform LightPoint lightPoints[MAX_LIGHT_POINTS];
 uniform SpotLight spotLights[MAX_SPOT_LIGHTS];
 uniform DirectionalLight directionalLight;
+uniform Fog fog;
 
 //Global Variables - use these for the material so that we do not do redundant texture lookups
 //if the material uses a texture instead of a color
@@ -150,6 +158,20 @@ vec4 calculateDirectionLight(DirectionalLight light, vec3 position, vec3 normal)
     return calculateLightColor(light.color, light.intensity, position, normalize(light.direction), normal);
 }
 
+//Fog Calculation Function
+vec4 calculateFog(vec3 pos, vec4 color, Fog fog, vec3 ambientLight, DirectionalLight directionalLight) {
+
+    //calculate fog
+    vec3 fogColor = fog.color * (ambientLight + directionalLight.color * directionalLight.intensity);
+    float distance = length(pos);
+    float fogFactor = 1.0 / exp((distance * fog.density) * (distance * fog.density));
+    fogFactor = clamp(fogFactor, 0.0, 1.0);
+
+    //calculate final color
+    vec3 resultColor = mix(fogColor, color.xyz, fogFactor);
+    return vec4(resultColor.xyz, color.w);
+}
+
 //Main Function
 void main() {
 
@@ -175,4 +197,9 @@ void main() {
 
     //account for ambient light
     fragColor = ambientC * vec4(ambientLight, 1) + diffuseSpecularComp; //add ambient light (unaffected by atten.) and return final fragment color
+
+    //account for fog
+    if (fog.activeFog == 1) {
+        fragColor = calculateFog(mvVertexPos, fragColor, fog, ambientLight, directionalLight);
+    }
 }

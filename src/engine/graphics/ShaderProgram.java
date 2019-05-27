@@ -3,6 +3,7 @@ package engine.graphics;
 import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.LightPoint;
 import engine.graphics.light.SpotLight;
+import engine.graphics.weather.Fog;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -117,6 +118,12 @@ public class ShaderProgram {
         createUniform(uniformName + ".intensity");
     }
 
+    public void createFogUniform(String uniformName) throws Exception {
+        createUniform(uniformName + ".activeFog");
+        createUniform(uniformName + ".color");
+        createUniform(uniformName + ".density");
+    }
+
     //Uniform Setting
     public void setUniform(String uniformName, int value) { glUniform1i(uniforms.get(uniformName), value); }
     public void setUniform(String uniformName, float value) { glUniform1f(uniforms.get(uniformName), value); }
@@ -171,6 +178,12 @@ public class ShaderProgram {
         setUniform(uniformName + ".color", value.getColor());
         setUniform(uniformName + ".direction", value.getDirection());
         setUniform(uniformName + ".intensity", value.getIntensity());
+    }
+
+    public void setUniform(String uniformName, Fog value) {
+        setUniform(uniformName + ".activeFog", value.isActive() ? 1 : 0);
+        setUniform(uniformName + ".color", value.getColor());
+        setUniform(uniformName + ".density", value.getDensity());
     }
 
     //Binding/Unbinding

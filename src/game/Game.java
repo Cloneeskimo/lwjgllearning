@@ -9,6 +9,7 @@ import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.LightPoint;
 import engine.graphics.light.SceneLighting;
 import engine.graphics.light.SpotLight;
+import engine.graphics.weather.Fog;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.glClearColor;
 
 public class Game implements IGameLogic {
 
@@ -62,11 +64,17 @@ public class Game implements IGameLogic {
         this.terrain = new Terrain(terrainSize, terrainScale, minY, maxY, "/textures/heightmap.png", "/textures/terrain.png", textureInc);
         this.scene.setGameItems(terrain.getChunks());
 
-        //create sky box
-        float skyBoxScale = 50.0f;
-        SkyBox skyBox = new SkyBox("/models/skybox.obj", "/textures/skybox.png");
-        skyBox.setScale(skyBoxScale);
-        scene.setSkyBox(skyBox);
+        //create fog
+        this.scene.setFog(new Fog(true, new Vector3f(0.5f, 0.5f, 0.5f), 0.15f));
+
+//        //create sky box
+//        float skyBoxScale = 50.0f;
+//        SkyBox skyBox = new SkyBox("/models/skybox.obj", "/textures/skybox.png");
+//        skyBox.setScale(skyBoxScale);
+//        scene.setSkyBox(skyBox);
+
+        //change window clear color for fog
+        glClearColor(0.5f, 0.5f, 0.5f, 0.0f);
 
         //setup lights
         setupLights();
@@ -119,7 +127,7 @@ public class Game implements IGameLogic {
         camera.movePosition(cameraVelocity.x * CAMERA_SPEED, cameraVelocity.y * CAMERA_SPEED, cameraVelocity.z * CAMERA_SPEED);
         float height = this.terrain.getHeight(camera.getPosition());
         if (camera.getPosition().y <= height) {
-            camera.setPosition(prevPosition);
+            camera.getPosition().y = height;
         }
 
         //update camera rotation and compass

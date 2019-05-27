@@ -82,13 +82,14 @@ public class Renderer {
         this.sceneShaderProgram.createUniform("modelView");
         this.sceneShaderProgram.createUniform("textureSampler");
 
-        //create lighting/material uniforms
+        //create lighting,material, and fog uniforms
         this.sceneShaderProgram.createMaterialUniform("material");
         this.sceneShaderProgram.createUniform("ambientLight");
         this.sceneShaderProgram.createUniform("specularPower");
         this.sceneShaderProgram.createLightPointListUniform("lightPoints", MAX_LIGHT_POINTS);
         this.sceneShaderProgram.createSpotLightListUniform("spotLights", MAX_SPOT_LIGHTS);
         this.sceneShaderProgram.createDirectionalLightUniform("directionalLight");
+        this.sceneShaderProgram.createFogUniform("fog");
     }
 
     //HUD Shader Setup Method
@@ -127,7 +128,7 @@ public class Renderer {
 
         //render
         this.renderScene(window, camera, scene);
-        this.renderSkyBox(window, camera, scene);
+        if (scene.getSkyBox() != null) this.renderSkyBox(window, camera, scene);
         this.renderHud(window, hud);
     }
 
@@ -137,7 +138,7 @@ public class Renderer {
         //bind shader program
         this.skyBoxShaderProgram.bind();
 
-        //set texture sampler and ambient light uniform
+        //set texture sampler, and ambient light uniform
         this.skyBoxShaderProgram.setUniform("textureSampler", 0);
         this.skyBoxShaderProgram.setUniform("ambientLight", scene.getLighting().getAmbientLight());
 
@@ -167,6 +168,9 @@ public class Renderer {
 
         //set the texture sampler to 0, in texture unit 0 of the graphics card
         sceneShaderProgram.setUniform("textureSampler", 0);
+
+        //set fog uniform
+        sceneShaderProgram.setUniform("fog", scene.getFog());
 
         //projection transformation (same for each GameItem)
         //we update this every render call to allow for resizing

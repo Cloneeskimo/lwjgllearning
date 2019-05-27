@@ -4,6 +4,7 @@ import engine.gameitem.GameItem;
 import engine.gameitem.SkyBox;
 import engine.graphics.Mesh;
 import engine.graphics.light.SceneLighting;
+import engine.graphics.weather.Fog;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,6 +17,7 @@ public class Scene {
     private Map<Mesh, List<GameItem>> meshMap;
     private SkyBox skyBox;
     private SceneLighting lighting;
+    private Fog fog;
 
     //Constructor
     public Scene() { this.meshMap = new HashMap<>(); }
@@ -24,6 +26,7 @@ public class Scene {
     public Map<Mesh, List<GameItem>> getMeshMap() { return this.meshMap; }
     public SkyBox getSkyBox() { return this.skyBox; }
     public SceneLighting getLighting() { return this.lighting; }
+    public Fog getFog() { return this.fog; }
 
     //Mutators
     public void setSkyBox(SkyBox skyBox) { this.skyBox = skyBox; }
@@ -43,4 +46,5 @@ public class Scene {
             l.add(gi);
         }
     }
+    public void setFog(Fog fog) { this.fog = fog; }
 }

@@ -86,6 +86,7 @@ public class ShaderProgram {
         createUniform(uniformName + ".diffuse");
         createUniform(uniformName + ".specular");
         createUniform(uniformName + ".hasTexture");
+        createUniform(uniformName + ".hasNormalMap");
         createUniform(uniformName + ".reflectance");
     }
 
@@ -143,6 +144,7 @@ public class ShaderProgram {
         setUniform(uniformName + ".diffuse", value.getDiffuseColor());
         setUniform(uniformName + ".specular", value.getSpecularColor());
         setUniform(uniformName + ".hasTexture", value.isTextured() ? 1 : 0);
+        setUniform(uniformName + ".hasNormalMap", value.hasNormalMap() ? 1 : 0);
         setUniform(uniformName + ".reflectance", value.getReflectance());
     }
 

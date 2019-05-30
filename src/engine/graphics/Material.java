@@ -13,6 +13,7 @@ public class Material {
     private Vector4f specularColor;
     private float reflectance;
     private Texture texture;
+    private Texture normalMap;
 
     //Constructors
     public Material() { //default constructor
@@ -50,7 +51,9 @@ public class Material {
     public Vector4f getSpecularColor() { return this.specularColor; }
     public float getReflectance() { return this.reflectance; }
     public boolean isTextured() { return this.texture != null; }
+    public boolean hasNormalMap() { return this.normalMap != null; }
     public Texture getTexture() { return this.texture; }
+    public Texture getNormalMap() { return this.normalMap; }
 
     //Mutators
     public void setAmbientColor(Vector4f ambientColor) { this.ambientColor = ambientColor; }
@@ -58,5 +61,5 @@ public class Material {
     public void setSpecularColor(Vector4f specularColor) { this.specularColor = specularColor; }
     public void setReflectance(float reflectance) { this.reflectance = reflectance; }
     public void setTexture(Texture texture) { this.texture = texture; }
-
+    public void setNormalMap(Texture normalMap) { this.normalMap = normalMap; }
 }

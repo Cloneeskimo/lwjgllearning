@@ -81,6 +81,7 @@ public class Renderer {
         this.sceneShaderProgram.createUniform("projection");
         this.sceneShaderProgram.createUniform("modelView");
         this.sceneShaderProgram.createUniform("textureSampler");
+        this.sceneShaderProgram.createUniform("normalMapSampler");
 
         //create lighting,material, and fog uniforms
         this.sceneShaderProgram.createMaterialUniform("material");
@@ -168,6 +169,7 @@ public class Renderer {
 
         //set the texture sampler to 0, in texture unit 0 of the graphics card
         sceneShaderProgram.setUniform("textureSampler", 0);
+        sceneShaderProgram.setUniform("normalMapSampler", 1);
 
         //set fog uniform
         sceneShaderProgram.setUniform("fog", scene.getFog());

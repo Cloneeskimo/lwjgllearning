@@ -67,11 +67,28 @@ public class Game implements IGameLogic {
         //create fog
         this.scene.setFog(new Fog(true, new Vector3f(0.5f, 0.5f, 0.5f), 0.15f));
 
-//        //create sky box
-//        float skyBoxScale = 50.0f;
-//        SkyBox skyBox = new SkyBox("/models/skybox.obj", "/textures/skybox.png");
-//        skyBox.setScale(skyBoxScale);
-//        scene.setSkyBox(skyBox);
+        //create quads for normal mapping expo (quad 1)
+        Mesh quadMesh1 = OBJLoader.loadMesh("/models/quad.obj");
+        Texture texture = new Texture("/textures/rock.png");
+        Material quadMaterial1 = new Material(texture, 0.65f);
+        quadMesh1.setMaterial(quadMaterial1);
+        GameItem quad1 = new GameItem(quadMesh1);
+        quad1.setPosition(-3f, 0, 0);
+        quad1.setScale(2.0f);
+        quad1.setRotation(90, 0, 0);
+
+        //quad 2
+        Mesh quadMesh2 = OBJLoader.loadMesh("/models/quad.obj");
+        Material quadMaterial2 = new Material(texture, 0.65f);
+        quadMaterial2.setNormalMap(new Texture("/textures/rock_normals.png"));
+        quadMesh2.setMaterial(quadMaterial2);
+        GameItem quad2 = new GameItem(quadMesh2);
+        quad2.setPosition(3f, 0, 0);
+        quad2.setScale(2.0f);
+        quad2.setRotation(90, 0, 0);
+
+        //add quads
+        this.scene.setGameItems(new GameItem[] { quad1, quad2 });
 
         //change window clear color for fog
         glClearColor(0.5f, 0.5f, 0.5f, 0.0f);
@@ -97,10 +114,10 @@ public class Game implements IGameLogic {
         this.scene.setLighting(lighting);
 
         //ambient light
-        lighting.setAmbientLight(new Vector3f(1.0f, 1.0f, 1.0f));
+        lighting.setAmbientLight(new Vector3f(0.3f, 0.3f, 0.3f));
 
         //directional light
-        lighting.setDirectionalLight(new DirectionalLight(new Vector3f(1, 1, 1), new Vector3f(-1, 0, 0), 1.0f));
+        lighting.setDirectionalLight(new DirectionalLight(new Vector3f(1, 1, 1), new Vector3f(1, 1, 0), 1.0f));
     }
 
     //Input Method
@@ -115,7 +132,10 @@ public class Game implements IGameLogic {
         if (window.isKeyPressed(GLFW_KEY_D)) cameraVelocity.x += 1;
         if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraVelocity.y += 1;
         if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraVelocity.y -= 1;
-        if (window.isKeyPressed(GLFW_KEY_3)) this.directionalLightAngle = -85;
+        if (window.isKeyPressed(GLFW_KEY_LEFT)) this.directionalLightAngle -= 2.5f;
+        if (this.directionalLightAngle < -90) this.directionalLightAngle = -90;
+        if (window.isKeyPressed(GLFW_KEY_RIGHT)) this.directionalLightAngle += 2.5f;
+        if (this.directionalLightAngle > 90) this.directionalLightAngle = 90;
     }
 
     //Update Method
@@ -134,38 +154,17 @@ public class Game implements IGameLogic {
         if (Window.MOUSE_GRABBED) {
             Vector2f rotVec = mouseInput.getDisplVec();
             this.camera.moveRotation(rotVec.x * MOUSE_SENSITIVITY, rotVec.y * MOUSE_SENSITIVITY, 0);
+            Vector3f rotation = this.camera.getRotation();
+            if (rotation.x > 90) rotation.x = 90;
+            if (rotation.x < -90) rotation.x = -90;
             this.hud.setCompassRotation(camera.getRotation().y);
         }
 
-        //update directional light color and intensity
-        SceneLighting lighting = this.scene.getLighting();
-        DirectionalLight directionalLight = lighting.getDirectionalLight();
-        this.directionalLightAngle += 0.3f;
-        if (this.directionalLightAngle > 90) {
-            directionalLight.setIntensity(0);
-            if (this.directionalLightAngle > 360) {
-                this.directionalLightAngle = -90;
-            }
-            lighting.getAmbientLight().set(0.4f, 0.4f, 0.4f);
-        } else if (this.directionalLightAngle <= -70 || this.directionalLightAngle >= 70) {
-            float factor = 1 - (float)(Math.abs(this.directionalLightAngle) - 70) / 20.0f;
-            float ambientFactor = Math.max(factor - 0.1f, 0.4f);
-            lighting.getAmbientLight().set(ambientFactor, ambientFactor, ambientFactor);
-            directionalLight.setIntensity(factor);
-            directionalLight.getColor().y = Math.max(factor, 0.9f);
-            directionalLight.getColor().z = Math.max(factor, 0.5f);
-        } else {
-            lighting.getAmbientLight().set(0.9f, 0.9f, 0.9f);
-            directionalLight.setIntensity(1);
-            directionalLight.getColor().x = 1;
-            directionalLight.getColor().y = 1;
-            directionalLight.getColor().z = 1;
-        }
-
         //update directional light direction
+        DirectionalLight dl = this.scene.getLighting().getDirectionalLight();
         double angle = Math.toRadians(this.directionalLightAngle);
-        directionalLight.getDirection().x = (float) Math.sin(angle);
-        directionalLight.getDirection().y = (float) Math.cos(angle);
+        dl.getDirection().x = (float) Math.sin(angle);
+        dl.getDirection().y = (float) Math.cos(angle);
 
         //update text
         Vector3f cameraPos = this.camera.getPosition();
@@ -183,8 +182,10 @@ public class Game implements IGameLogic {
     @Override
     public void cleanup() {
         this.renderer.cleanup();
-        Map<Mesh, List<GameItem>> meshMap = this.scene.getMeshMap();
-        for (Mesh mesh : meshMap.keySet()) mesh.cleanup();
-        this.hud.cleanup();
+        if (this.scene != null) {
+            Map<Mesh, List<GameItem>> meshMap = this.scene.getMeshMap();
+            for (Mesh mesh : meshMap.keySet()) mesh.cleanup();
+        }
+        if (this.hud != null) this.hud.cleanup();
     }
 }

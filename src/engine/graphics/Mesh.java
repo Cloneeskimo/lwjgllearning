@@ -133,10 +133,15 @@ public class Mesh {
     private void preRender() {
 
         //bind texture
-        Texture t = this.material.getTexture();
-        if (t != null) {
+        if (this.material.isTextured()) {
             glActiveTexture(GL_TEXTURE0); //activate first texture bank
-            glBindTexture(GL_TEXTURE_2D, t.getID()); //bind texture
+            glBindTexture(GL_TEXTURE_2D, this.material.getTexture().getID()); //bind texture
+        }
+
+        //bind normal map
+        if (this.material.hasNormalMap()) {
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, this.material.getNormalMap().getID());
         }
 
         //bind VAO and attribute arrays

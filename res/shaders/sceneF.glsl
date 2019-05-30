@@ -7,9 +7,10 @@ const int MAX_LIGHT_POINTS = 5;
 const int MAX_SPOT_LIGHTS = 5;
 
 //Ins
-in vec2 textureCoordsFrag; //color passed from vertex shader
-in vec3 mvVertexNormal;    //vertex normal vector from vertex shader for lighting calculations (model view space)
-in vec3 mvVertexPos;       //vertex position from vertex shader for lighting calculations (model view space)
+in vec2 textureCoordsFrag;  //color passed from vertex shader
+in vec3 mvVertexNormal;     //vertex normal vector from vertex shader for lighting calculations (model view space)
+in vec3 mvVertexPos;        //vertex position from vertex shader for lighting calculations (model view space)
+in mat4 modelViewFrag;      //ModelView matrix used for normal maps
 
 //Out
 out vec4 fragColor;        //output variable definition
@@ -62,14 +63,16 @@ struct Material {
     vec4 diffuse;
     vec4 specular;
     int hasTexture;
+    int hasNormalMap;
     float reflectance;
 };
 
 //Uniforms
-uniform sampler2D textureSampler;               //use this to define which texture unit/bank of the graphics card we will store the texture in
-uniform vec3 ambientLight;                      //a color which will affect every fragment in the same way (ambient light)
-uniform float specularPower;                    //exponent used in calculation specular light
-uniform Material material;                      //material characteristics
+uniform sampler2D textureSampler;   //use this to define which texture unit/bank of the graphics card we will store the texture in
+uniform sampler2D normalMapSampler; //use this to define the texture unit/bank for the normal map texture
+uniform vec3 ambientLight;          //a color which will affect every fragment in the same way (ambient light)
+uniform float specularPower;        //exponent used in calculation specular light
+uniform Material material;          //material characteristics
 
 //Light Object and Fog Uniforms
 uniform LightPoint lightPoints[MAX_LIGHT_POINTS];
@@ -172,26 +175,40 @@ vec4 calculateFog(vec3 pos, vec4 color, Fog fog, vec3 ambientLight, DirectionalL
     return vec4(resultColor.xyz, color.w);
 }
 
+//Normal Calculation Function
+vec3 calcNormal(Material material, vec3 normal, vec2 texCoord, mat4 modelViewMatrix) {
+    vec3 newNormal = normal;
+    if (material.hasNormalMap == 1) {
+        newNormal = texture(normalMapSampler, texCoord).rgb;
+        newNormal = normalize(newNormal * 2 - 1);
+        newNormal = normalize(modelViewMatrix * vec4(newNormal, 0.0)).xyz;
+    }
+    return newNormal;
+}
+
 //Main Function
 void main() {
 
     //setup color bases
     setupColors(material, textureCoordsFrag); //setup the color bases we will be working with (texture or manually provided?)
 
+    //calculate normal
+    vec3 currNormal = calcNormal(material, mvVertexNormal, textureCoordsFrag, modelViewFrag);
+
     //account for directional light
-    vec4 diffuseSpecularComp = calculateDirectionLight(directionalLight, mvVertexPos, mvVertexNormal); //calculate diffuse and specular light for sun
+    vec4 diffuseSpecularComp = calculateDirectionLight(directionalLight, mvVertexPos, currNormal); //calculate diffuse and specular light for sun
 
     //account for light points
     for (int i = 0; i < MAX_LIGHT_POINTS; i++) {
         if (lightPoints[i].intensity > 0) {
-            diffuseSpecularComp += calculateLightPoint(lightPoints[i], mvVertexPos, mvVertexNormal);
+            diffuseSpecularComp += calculateLightPoint(lightPoints[i], mvVertexPos, currNormal);
         }
     }
 
     //account for spot lights
     for (int i = 0; i < MAX_SPOT_LIGHTS; i++) {
         if (spotLights[i].lightPoint.intensity > 0) {
-            diffuseSpecularComp += calculateSpotLight(spotLights[i], mvVertexPos, mvVertexNormal);
+            diffuseSpecularComp += calculateSpotLight(spotLights[i], mvVertexPos, currNormal);
         }
     }
 

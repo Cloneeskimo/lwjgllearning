@@ -9,6 +9,9 @@ public class Fog {
     private float density;
     private Vector3f color;
 
+    //No Fog Constant
+    public static Fog NOFOG = new Fog();
+
     //Constructors
     public Fog() { //default
         this(false, new Vector3f(0, 0, 0), 0);

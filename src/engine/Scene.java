@@ -20,7 +20,10 @@ public class Scene {
     private Fog fog;
 
     //Constructor
-    public Scene() { this.meshMap = new HashMap<>(); }
+    public Scene() {
+        this.meshMap = new HashMap<>();
+        this.fog = Fog.NOFOG;
+    }
 
     //Accessors
     public Map<Mesh, List<GameItem>> getMeshMap() { return this.meshMap; }

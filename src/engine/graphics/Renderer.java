@@ -22,6 +22,10 @@ import java.util.Map;
 
 import static org.lwjgl.glfw.GLFW.glfwGetWindowSize;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL13.GL_TEXTURE2;
+import static org.lwjgl.opengl.GL13.glActiveTexture;
+import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER;
+import static org.lwjgl.opengl.GL30.glBindFramebuffer;
 
 public class Renderer {
 
@@ -34,6 +38,8 @@ public class Renderer {
 
     //Instance Data
     private Transformation transformation;
+    private ShadowMap shadowMap;
+    private ShaderProgram depthShaderProgram;
     private ShaderProgram skyBoxShaderProgram;
     private ShaderProgram sceneShaderProgram;
     private ShaderProgram hudShaderProgram;
@@ -47,9 +53,25 @@ public class Renderer {
 
     //Initializer
     public void init(Window window) throws Exception {
+        this.shadowMap = new ShadowMap();
+        this.setupDepthShader();
         this.setupSkyBoxShader();
         this.setupSceneShader();
         this.setupHudShader();
+    }
+
+    //Depth Shader Setup Method
+    private void setupDepthShader() throws Exception {
+
+        //create shader program
+        this.depthShaderProgram = new ShaderProgram();
+        this.depthShaderProgram.createVertexShader(Utils.loadResource("/shaders/depthV.glsl"));
+        this.depthShaderProgram.createFragmentShader(Utils.loadResource("/shaders/depthF.glsl"));
+        this.depthShaderProgram.link();
+
+        //create uniforms
+        this.depthShaderProgram.createUniform("orthoProjectionMatrix");
+        this.depthShaderProgram.createUniform("modelLightViewMatrix");
     }
 
     //SkyBox Shader Setup Method
@@ -83,7 +105,7 @@ public class Renderer {
         this.sceneShaderProgram.createUniform("textureSampler");
         this.sceneShaderProgram.createUniform("normalMapSampler");
 
-        //create lighting,material, and fog uniforms
+        //create lighting, material, and fog uniforms
         this.sceneShaderProgram.createMaterialUniform("material");
         this.sceneShaderProgram.createUniform("ambientLight");
         this.sceneShaderProgram.createUniform("specularPower");
@@ -91,6 +113,11 @@ public class Renderer {
         this.sceneShaderProgram.createSpotLightListUniform("spotLights", MAX_SPOT_LIGHTS);
         this.sceneShaderProgram.createDirectionalLightUniform("directionalLight");
         this.sceneShaderProgram.createFogUniform("fog");
+
+        //create uniforms for shadow mapping
+        this.sceneShaderProgram.createUniform("shadowMap");
+        this.sceneShaderProgram.createUniform("orthoProjectionMatrix");
+        this.sceneShaderProgram.createUniform("modelLightViewMatrix");
     }
 
     //HUD Shader Setup Method
@@ -117,20 +144,60 @@ public class Renderer {
         //clear screen
         this.clear();
 
-        //account for window resizing
-        if (window.isResized()) {
-            glViewport(0, 0, window.getWidth(), window.getHeight());
-            window.setResized(false);
-        }
+        //render depth map
+        this.renderDepthMap(window, camera, scene);
+
+        //set viewport
+        glViewport(0, 0, window.getWidth(), window.getHeight());
 
         //update projection and view matrix once per render cycle
-        this.transformation.buildProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
-        this.transformation.buildViewMatrix(camera);
+        this.transformation.updateProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
+        this.transformation.updateViewMatrix(camera);
 
         //render
         this.renderScene(window, camera, scene);
         if (scene.getSkyBox() != null) this.renderSkyBox(window, camera, scene);
         this.renderHud(window, hud);
+    }
+
+    //DepthMap Rendering Method
+    private void renderDepthMap(Window window, Camera camera, Scene scene) {
+
+        //setup view port to match the texture size
+        glBindFramebuffer(GL_FRAMEBUFFER, this.shadowMap.getDepthMapFBO());
+        glViewport(0, 0, ShadowMap.SHADOW_MAP_WIDTH, ShadowMap.SHADOW_MAP_HEIGHT);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        //bind shader program
+        this.depthShaderProgram.bind();
+
+        //get light and light direction
+        DirectionalLight l = scene.getLighting().getDirectionalLight();
+        Vector3f lDir = l.getDirection();
+
+        //calculate the orthoProjectionMatrix
+        float lAngleX = (float)Math.toDegrees(Math.acos(lDir.z));
+        float lAngleY = (float)Math.toDegrees(Math.asin(lDir.x));
+        float lAngleZ = 0;
+        Matrix4f lightViewMatrix = transformation.updateLightViewMatrix(new Vector3f(lDir).mul(l.getShadowPosMult()),
+                new Vector3f(lAngleX, lAngleY, lAngleZ));
+        DirectionalLight.OrthoCoords orthoCoords = l.getOrthoCoords();
+        Matrix4f orthoProjMatrix = transformation.updateOrthoProjectionMatrix(orthoCoords.left, orthoCoords.right,
+                orthoCoords.bottom, orthoCoords.top, orthoCoords.near, orthoCoords.far);
+        depthShaderProgram.setUniform("orthoProjectionMatrix", orthoProjMatrix);
+        Map<Mesh, List<GameItem>> meshes = scene.getMeshMap();
+
+        //render each mesh
+        for (Mesh mesh : meshes.keySet()) {
+            mesh.renderList(meshes.get(mesh), (GameItem item) -> {
+                Matrix4f modelLightViewMatrix = transformation.updateModelViewMatrix(item, lightViewMatrix);
+                depthShaderProgram.setUniform("modelLightViewMatrix", modelLightViewMatrix);
+            });
+        }
+
+        //unbind shader program and buffer
+        this.depthShaderProgram.unbind();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     //SkyBox Rendering Method
@@ -141,7 +208,7 @@ public class Renderer {
 
         //set texture sampler, and ambient light uniform
         this.skyBoxShaderProgram.setUniform("textureSampler", 0);
-        this.skyBoxShaderProgram.setUniform("ambientLight", scene.getLighting().getAmbientLight());
+        this.skyBoxShaderProgram.setUniform("ambientLight", scene.getLighting().getSkyBoxLight());
 
         //set projection matrix
         this.skyBoxShaderProgram.setUniform("projection", this.transformation.getProjectionMatrix());
@@ -152,7 +219,7 @@ public class Renderer {
         viewMatrix.m30(0); //we don't want the skybox to translate, but we
         viewMatrix.m31(0); //do want it to rotate. we acquire this effect
         viewMatrix.m32(0); //by setting these values to 0
-        this.skyBoxShaderProgram.setUniform("modelView", this.transformation.buildModelViewMatrix(skyBox, viewMatrix));
+        this.skyBoxShaderProgram.setUniform("modelView", this.transformation.updateModelViewMatrix(skyBox, viewMatrix));
 
         //render
         scene.getSkyBox().getMesh().render();
@@ -167,22 +234,23 @@ public class Renderer {
         //bind shader program
         sceneShaderProgram.bind();
 
-        //set the texture sampler to 0, in texture unit 0 of the graphics card
-        sceneShaderProgram.setUniform("textureSampler", 0);
-        sceneShaderProgram.setUniform("normalMapSampler", 1);
-
-        //set fog uniform
-        sceneShaderProgram.setUniform("fog", scene.getFog());
-
         //projection transformation (same for each GameItem)
         //we update this every render call to allow for resizing
         sceneShaderProgram.setUniform("projection", this.transformation.getProjectionMatrix());
+        sceneShaderProgram.setUniform("orthoProjectionMatrix", transformation.getOrthoProjectionMatrix());
 
-        //view transformation (same for each GameItem, changes depending on camera)
+        //view and lightview transformation (same for each GameItem, changes depending on camera)
+        Matrix4f lightViewMatrix = transformation.getLightViewMatrix();
         Matrix4f viewMatrix = transformation.getViewMatrix();
 
         //render lights
         renderLights(viewMatrix, scene.getLighting());
+
+        //set the sampler and fog uniforms
+        sceneShaderProgram.setUniform("textureSampler", 0);
+        sceneShaderProgram.setUniform("normalMapSampler", 1);
+        sceneShaderProgram.setUniform("shadowMap", 2);
+        sceneShaderProgram.setUniform("fog", scene.getFog());
 
         //loop through each mesh and render each game item for that mesh
         Map<Mesh, List<GameItem>> meshMap = scene.getMeshMap();
@@ -190,8 +258,13 @@ public class Renderer {
 
             //set material then set game item specifics using a lambda
             this.sceneShaderProgram.setUniform("material", m.getMaterial());
+
+            //enable shadow map texture
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, this.shadowMap.getDepthMap().getID());
             m.renderList(meshMap.get(m), (GameItem gi) -> {
-                this.sceneShaderProgram.setUniform("modelView", this.transformation.buildModelViewMatrix(gi, viewMatrix));
+                this.sceneShaderProgram.setUniform("modelView", this.transformation.updateModelViewMatrix(gi, viewMatrix));
+                this.sceneShaderProgram.setUniform("modelLightViewMatrix", this.transformation.updateModelLightViewMatrix(gi, lightViewMatrix));
             });
         }
 
@@ -257,13 +330,13 @@ public class Renderer {
         hudShaderProgram.bind();
 
         //calculate orthographic projection matrix
-        Matrix4f ortho = this.transformation.buildOrthoProjectionMatrix(0, window.getWidth(), window.getHeight(), 0);
+        Matrix4f ortho = this.transformation.updateOrtho2DProjectionMatrix(0, window.getWidth(), window.getHeight(), 0);
 
         //render each hud item
         for (GameItem gameItem : hud.getGameItems()) {
 
             //calculate model matrix and set uniforms
-            Matrix4f projectionModelMatrix = this.transformation.buildOrthoProjModelMatrix(gameItem, ortho);
+            Matrix4f projectionModelMatrix = this.transformation.updateOrthoProjModelMatrix(gameItem, ortho);
             this.hudShaderProgram.setUniform("projectionModel", projectionModelMatrix);
             this.hudShaderProgram.setUniform("color", gameItem.getMesh().getMaterial().getAmbientColor());
             this.hudShaderProgram.setUniform("hasTexture", gameItem.getMesh().getMaterial().isTextured() ? 1 : 0);

@@ -10,6 +10,7 @@ const int MAX_SPOT_LIGHTS = 5;
 in vec2 textureCoordsFrag;  //color passed from vertex shader
 in vec3 mvVertexNormal;     //vertex normal vector from vertex shader for lighting calculations (model view space)
 in vec3 mvVertexPos;        //vertex position from vertex shader for lighting calculations (model view space)
+in vec4 mlightviewVertexPos;
 in mat4 modelViewFrag;      //ModelView matrix used for normal maps
 
 //Out
@@ -70,6 +71,7 @@ struct Material {
 //Uniforms
 uniform sampler2D textureSampler;   //use this to define which texture unit/bank of the graphics card we will store the texture in
 uniform sampler2D normalMapSampler; //use this to define the texture unit/bank for the normal map texture
+uniform sampler2D shadowMap;        //use this to create shadows
 uniform vec3 ambientLight;          //a color which will affect every fragment in the same way (ambient light)
 uniform float specularPower;        //exponent used in calculation specular light
 uniform Material material;          //material characteristics
@@ -186,6 +188,28 @@ vec3 calcNormal(Material material, vec3 normal, vec2 texCoord, mat4 modelViewMat
     return newNormal;
 }
 
+//Shadow Calculation Function
+float calculateShadow(vec4 position) {
+    float shadowFactor = 1.0;
+    vec3 projCoords = position.xyz;
+    vec2 inc = 1.0 / textureSize(shadowMap, 0);
+
+    //transform from screen coordinates to texture coordinates
+    projCoords = projCoords * 0.5 + 0.5;
+    float bias = 0.05;
+    for (int row = -1; row <= 1; ++row) {
+        for (int col = -1; col <= 1; ++col) {
+            float texDepth = texture(shadowMap, projCoords.xy + vec2(row, col) * inc).r;
+            shadowFactor += projCoords.z - bias > texDepth ? 1.0 : 0.0;
+        }
+    }
+
+    shadowFactor /= 9.0;
+    if (projCoords.z > 1.0) shadowFactor = 1.0;
+
+    return 1 - shadowFactor;
+}
+
 //Main Function
 void main() {
 
@@ -213,7 +237,8 @@ void main() {
     }
 
     //account for ambient light
-    fragColor = ambientC * vec4(ambientLight, 1) + diffuseSpecularComp; //add ambient light (unaffected by atten.) and return final fragment color
+    float shadow = calculateShadow(mlightviewVertexPos);
+    fragColor = clamp(ambientC * vec4(ambientLight, 1) + diffuseSpecularComp * shadow, 0, 1); //add ambient light (unaffected by atten.) and return final fragment color
 
     //account for fog
     if (fog.activeFog == 1) {

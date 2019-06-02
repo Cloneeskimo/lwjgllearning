@@ -29,22 +29,23 @@ public class Game implements IGameLogic {
     private static final float CAMERA_SPEED = 0.05f;
 
     //Non-Lighting Instance Data
-    private final Vector3f cameraVelocity;
+    private final Vector3f cameraInc;
     private final Renderer renderer;
     private final Camera camera;
 
     //Scene and HUD
     private Scene scene;
-    private Terrain terrain;
+    private GameItem item;
     private Hud hud;
     private float directionalLightAngle;
+    private float directionalLightAngleInc;
 
     //Constructor
     public Game() {
         this.renderer = new Renderer();
         this.camera = new Camera();
-        this.cameraVelocity = new Vector3f();
-        this.directionalLightAngle = -90;
+        this.cameraInc = new Vector3f(0.0f, 0.0f, 0.0f);
+        this.directionalLightAngle = 45;
     }
 
     //Initialization Method
@@ -55,43 +56,27 @@ public class Game implements IGameLogic {
         this.renderer.init(window);
         this.scene = new Scene();
 
-        //create terrain
-        float terrainScale = 15;
-        int terrainSize = 3;
-        float minY = -0.1f;
-        float maxY = 0.1f;
-        int textureInc = 40;
-        this.terrain = new Terrain(terrainSize, terrainScale, minY, maxY, "/textures/heightmap.png", "/textures/terrain.png", textureInc);
-        this.scene.setGameItems(terrain.getChunks());
+        //setup cube
+        float reflectance = 1f;
+        Mesh itemMesh = OBJLoader.loadMesh("/models/pillar.obj");
+        Texture itemTexture = new Texture("/textures/templepillar.png");
+        Material itemMaterial = new Material(itemTexture, reflectance);
+        itemMesh.setMaterial(itemMaterial);
+        this.item = new GameItem(itemMesh);
+        this.item.setPosition(0, 0, 0);
+        this.item.setRotation(90, 0, 45);
+        this.item.setScale(0.5f);
 
-        //create fog
-        this.scene.setFog(new Fog(true, new Vector3f(0.5f, 0.5f, 0.5f), 0.15f));
+        //setup plane/quad beneath cube
+        Mesh quadMesh = OBJLoader.loadMesh("/models/plane.obj");
+        Material quadMaterial = new Material(new Vector4f(1.0f, 1.0f, 1.0f, 10.0f), reflectance);
+        quadMesh.setMaterial(quadMaterial);
+        GameItem quad = new GameItem(quadMesh);
+        quad.setPosition(0, -1, 0);
+        quad.setScale(2.5f);
 
-        //create quads for normal mapping expo (quad 1)
-        Mesh quadMesh1 = OBJLoader.loadMesh("/models/quad.obj");
-        Texture texture = new Texture("/textures/rock.png");
-        Material quadMaterial1 = new Material(texture, 0.65f);
-        quadMesh1.setMaterial(quadMaterial1);
-        GameItem quad1 = new GameItem(quadMesh1);
-        quad1.setPosition(-3f, 0, 0);
-        quad1.setScale(2.0f);
-        quad1.setRotation(90, 0, 0);
-
-        //quad 2
-        Mesh quadMesh2 = OBJLoader.loadMesh("/models/quad.obj");
-        Material quadMaterial2 = new Material(texture, 0.65f);
-        quadMaterial2.setNormalMap(new Texture("/textures/rock_normals.png"));
-        quadMesh2.setMaterial(quadMaterial2);
-        GameItem quad2 = new GameItem(quadMesh2);
-        quad2.setPosition(3f, 0, 0);
-        quad2.setScale(2.0f);
-        quad2.setRotation(90, 0, 0);
-
-        //add quads
-        this.scene.setGameItems(new GameItem[] { quad1, quad2 });
-
-        //change window clear color for fog
-        glClearColor(0.5f, 0.5f, 0.5f, 0.0f);
+        //add items to scene
+        this.scene.setGameItems(new GameItem[] { this.item, quad });
 
         //setup lights
         setupLights();
@@ -101,9 +86,7 @@ public class Game implements IGameLogic {
         this.hud.updateSize(window);
 
         //move camera
-        this.camera.getPosition().x = 10.0f;
-        this.camera.getPosition().y = -0.2f;
-        this.camera.getPosition().z = 0.0f;
+        this.camera.getPosition().z = 2.0f;
     }
 
     //Light Setup Method
@@ -115,9 +98,15 @@ public class Game implements IGameLogic {
 
         //ambient light
         lighting.setAmbientLight(new Vector3f(0.3f, 0.3f, 0.3f));
+        lighting.setSkyBoxLight(new Vector3f(1.0f, 1.0f, 1.0f));
 
         //directional light
-        lighting.setDirectionalLight(new DirectionalLight(new Vector3f(1, 1, 1), new Vector3f(1, 1, 0), 1.0f));
+        float lightIntensity = 1.0f;
+        Vector3f lightDirection = new Vector3f(0, 1, 1);
+        DirectionalLight dl = new DirectionalLight(new Vector3f(1, 1, 1), lightDirection, lightIntensity);
+        dl.setShadowPosMult(5);
+        dl.setOrthoCoords(-10.0f, 10.0f,-10.0f, 10.0f, -1.0f, 20.0f);
+        lighting.setDirectionalLight(dl);
     }
 
     //Input Method
@@ -125,17 +114,16 @@ public class Game implements IGameLogic {
     public void input(Window window) {
 
         //camera movement
-        this.cameraVelocity.set(0, 0, 0);
-        if (window.isKeyPressed(GLFW_KEY_W)) cameraVelocity.z -= 1;
-        if (window.isKeyPressed(GLFW_KEY_S)) cameraVelocity.z += 1;
-        if (window.isKeyPressed(GLFW_KEY_A)) cameraVelocity.x -= 1;
-        if (window.isKeyPressed(GLFW_KEY_D)) cameraVelocity.x += 1;
-        if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraVelocity.y += 1;
-        if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraVelocity.y -= 1;
-        if (window.isKeyPressed(GLFW_KEY_LEFT)) this.directionalLightAngle -= 2.5f;
-        if (this.directionalLightAngle < -90) this.directionalLightAngle = -90;
-        if (window.isKeyPressed(GLFW_KEY_RIGHT)) this.directionalLightAngle += 2.5f;
-        if (this.directionalLightAngle > 90) this.directionalLightAngle = 90;
+        this.cameraInc.set(0, 0, 0);
+        this.directionalLightAngleInc = 0.0f;
+        if (window.isKeyPressed(GLFW_KEY_W)) cameraInc.z -= 1;
+        if (window.isKeyPressed(GLFW_KEY_S)) cameraInc.z += 1;
+        if (window.isKeyPressed(GLFW_KEY_A)) cameraInc.x -= 1;
+        if (window.isKeyPressed(GLFW_KEY_D)) cameraInc.x += 1;
+        if (window.isKeyPressed(GLFW_KEY_SPACE)) cameraInc.y += 1;
+        if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraInc.y -= 1;
+        if (window.isKeyPressed(GLFW_KEY_LEFT)) this.directionalLightAngleInc -= 1f;
+        if (window.isKeyPressed(GLFW_KEY_RIGHT)) this.directionalLightAngleInc += 1f;
     }
 
     //Update Method
@@ -143,12 +131,7 @@ public class Game implements IGameLogic {
     public void update(float interval, MouseInput mouseInput) {
 
         //update camera position
-        Vector3f prevPosition = new Vector3f(camera.getPosition());
-        camera.movePosition(cameraVelocity.x * CAMERA_SPEED, cameraVelocity.y * CAMERA_SPEED, cameraVelocity.z * CAMERA_SPEED);
-        float height = this.terrain.getHeight(camera.getPosition());
-        if (camera.getPosition().y <= height) {
-            camera.getPosition().y = height;
-        }
+        camera.movePosition(cameraInc.x * CAMERA_SPEED, cameraInc.y * CAMERA_SPEED, cameraInc.z * CAMERA_SPEED);
 
         //update camera rotation and compass
         if (Window.MOUSE_GRABBED) {
@@ -160,15 +143,28 @@ public class Game implements IGameLogic {
             this.hud.setCompassRotation(camera.getRotation().y);
         }
 
+        //update cube rotation
+        float rotY = this.item.getRotation().y;
+        rotY += 0.5f;
+        if (rotY >= 360) rotY -= 360;
+        this.item.getRotation().y = rotY;
+
         //update directional light direction
-        DirectionalLight dl = this.scene.getLighting().getDirectionalLight();
-        double angle = Math.toRadians(this.directionalLightAngle);
-        dl.getDirection().x = (float) Math.sin(angle);
-        dl.getDirection().y = (float) Math.cos(angle);
+        this.directionalLightAngle += this.directionalLightAngleInc;
+        if (this.directionalLightAngle < 0) this.directionalLightAngle = 0;
+        if (this.directionalLightAngle > 180) this.directionalLightAngle = 180;
+        float z = (float)Math.cos(Math.toRadians(directionalLightAngle));
+        float y = (float)Math.sin(Math.toRadians(directionalLightAngle));
+        Vector3f lightDir = this.scene.getLighting().getDirectionalLight().getDirection();
+        lightDir.x = 0;
+        lightDir.y = y;
+        lightDir.z = z;
+        lightDir.normalize();
+        float angle = (float)Math.toDegrees(Math.acos(lightDir.z));
 
         //update text
         Vector3f cameraPos = this.camera.getPosition();
-        this.hud.setStatusText("FPS: " + GameEngine.CURRENT_FPS + " POS: " + cameraPos.x + ", " + cameraPos.y + ", " + cameraPos.z + " HEIGHT: " + height);
+        this.hud.setStatusText("FPS: " + GameEngine.CURRENT_FPS + " LIGHT ANGLE: " + angle);
     }
 
     //Render Method

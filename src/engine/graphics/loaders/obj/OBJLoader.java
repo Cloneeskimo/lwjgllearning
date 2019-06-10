@@ -1,6 +1,7 @@
-package engine.graphics;
+package engine.graphics.loaders.obj;
 
 import engine.Utils;
+import engine.graphics.Mesh;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import java.util.ArrayList;

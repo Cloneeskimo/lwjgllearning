@@ -36,4 +36,15 @@ public class Utils {
         for (int i = 0; i < size; i++) a[i] = list.get(i);
         return a;
     }
+
+    //A method which returns whether a resource exists or not
+    public static boolean resourceFileExists(String fileName) {
+        boolean result;
+        try (InputStream is = Utils.class.getResourceAsStream(fileName)) {
+            result = is != null;
+        } catch (Exception e) {
+            result = false;
+        }
+        return result;
+    }
 }

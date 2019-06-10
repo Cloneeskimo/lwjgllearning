@@ -9,30 +9,40 @@ public class GameItem {
     private final Vector3f position;
     private final Vector3f rotation;
     private float scale;
-    private Mesh mesh;
+    private Mesh[] meshes;
 
-    //Constructors
-    public GameItem() { //default constructor
+    //Default Constructor
+    public GameItem() {
         this.position = new Vector3f(0, 0, 0);
         this.rotation = new Vector3f(0, 0, 0);
         this.scale = 1;
     }
 
-    public GameItem(Mesh mesh) { //mesh constructor
-        this.mesh = mesh;
-        this.position = new Vector3f(0, 0, 0);
-        this.scale = 1;
-        this.rotation = new Vector3f(0, 0, 0);
+    //Static Constructor
+    public GameItem(Mesh mesh) {
+        this();
+        this.meshes = new Mesh[]{ mesh };
+    }
+
+    //Animation Constructor
+    public GameItem(Mesh[] meshes) {
+        this();
+        this.meshes = meshes;
     }
 
     //Accessors
     public float getScale() { return this.scale; }
-    public Mesh getMesh() { return this.mesh; }
+    public Mesh getMesh() { return this.meshes[0]; }
+    public Mesh[] getMeshes() { return this.meshes; }
     public Vector3f getPosition() { return this.position; }
     public Vector3f getRotation() { return this.rotation; }
 
     //Mutators
-    public void setMesh(Mesh mesh) { this.mesh = mesh; }
+    public void setMesh(Mesh mesh, boolean cleanup) {
+        if (cleanup) this.cleanup();
+        this.meshes = new Mesh[]{ mesh };
+    }
+    public void setMeshes(Mesh[] meshes) { this.meshes = meshes; }
     public void setScale(float scale) { this.scale = scale; }
     public void setPosition(float x, float y, float z) {
         this.position.x = x;
@@ -55,6 +65,12 @@ public class GameItem {
         this.rotation.z = xyz.z;
     }
 
-    //Other methods
-    public void cleanup() { this.mesh.cleanup(); }
+    //Cleanup Method
+    public void cleanup() {
+        if (this.meshes != null) {
+            for (int i = 0; i < this.meshes.length; i++) {
+                if (this.meshes[i] != null) this.meshes[i].cleanup();
+            }
+        }
+    }
 }

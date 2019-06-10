@@ -25,7 +25,7 @@ public class TextItem extends GameItem {
         super();
         this.text = text;
         this.fontTexture = fontTexture;
-        this.setMesh(buildMesh());
+        this.setMesh(buildMesh(), true);
     }
 
     //Mesh-Building Method
@@ -106,6 +106,6 @@ public class TextItem extends GameItem {
     public void setText(String text) {
         this.text = text;
         this.getMesh().deleteBuffers();
-        this.setMesh(buildMesh());
+        this.setMesh(buildMesh(), true);
     }
 }

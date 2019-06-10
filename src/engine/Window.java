@@ -24,6 +24,7 @@ public class Window {
     private boolean resized; //whether the window has been resized or not
     private boolean vSync; //whether to use V-Sync or not
     private int polgyonMode = GL_FILL; //polygon mode
+    private boolean cullFace = true; //face culling
 
     //Constructor
     public Window(String title, int width, int height, boolean vSync) {
@@ -87,6 +88,8 @@ public class Window {
                 this.togglePolygonMode();
             if (key == GLFW_KEY_2 && action == GLFW_RELEASE)
                 this.toggleMouseGrab();
+            if (key == GLFW_KEY_3 && action == GLFW_RELEASE)
+                this.toggleCullFace();
         });
 
         //get the resolution of the primary monitor
@@ -134,6 +137,15 @@ public class Window {
     private void toggleMouseGrab() {
         Window.MOUSE_GRABBED = !Window.MOUSE_GRABBED;
         glfwSetInputMode(this.windowHandle, GLFW_CURSOR, Window.MOUSE_GRABBED ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+    }
+
+    private void toggleCullFace() {
+        this.cullFace = !this.cullFace;
+        if (this.cullFace) {
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+        }
+        else glDisable(GL_CULL_FACE);
     }
 
     //Accessors

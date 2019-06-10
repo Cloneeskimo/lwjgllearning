@@ -7,7 +7,7 @@ import engine.gameitem.TextItem;
 import engine.graphics.FontTexture;
 import engine.graphics.Material;
 import engine.graphics.Mesh;
-import engine.graphics.OBJLoader;
+import engine.graphics.loaders.obj.OBJLoader;
 import org.joml.Vector4f;
 
 import java.awt.*;

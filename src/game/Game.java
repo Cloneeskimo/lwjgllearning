@@ -2,25 +2,20 @@ package game;
 
 import engine.*;
 import engine.gameitem.GameItem;
-import engine.gameitem.SkyBox;
-import engine.gameitem.Terrain;
 import engine.graphics.*;
 import engine.graphics.light.DirectionalLight;
-import engine.graphics.light.LightPoint;
 import engine.graphics.light.SceneLighting;
-import engine.graphics.light.SpotLight;
-import engine.graphics.weather.Fog;
+import engine.graphics.loaders.md5.MD5Loader;
+import engine.graphics.loaders.md5.MD5Model;
+import engine.graphics.loaders.obj.OBJLoader;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
-import org.lwjgl.system.CallbackI;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.opengl.GL11.glClearColor;
 
 public class Game implements IGameLogic {
 
@@ -35,7 +30,6 @@ public class Game implements IGameLogic {
 
     //Scene and HUD
     private Scene scene;
-    private GameItem item;
     private Hud hud;
     private float directionalLightAngle;
     private float directionalLightAngleInc;
@@ -56,27 +50,22 @@ public class Game implements IGameLogic {
         this.renderer.init(window);
         this.scene = new Scene();
 
-        //setup cube
-        float reflectance = 1f;
-        Mesh itemMesh = OBJLoader.loadMesh("/models/pillar.obj");
-        Texture itemTexture = new Texture("/textures/templepillar.png");
-        Material itemMaterial = new Material(itemTexture, reflectance);
-        itemMesh.setMaterial(itemMaterial);
-        this.item = new GameItem(itemMesh);
-        this.item.setPosition(0, 0, 0);
-        this.item.setRotation(90, 0, 45);
-        this.item.setScale(0.5f);
-
         //setup plane/quad beneath cube
         Mesh quadMesh = OBJLoader.loadMesh("/models/plane.obj");
-        Material quadMaterial = new Material(new Vector4f(1.0f, 1.0f, 1.0f, 10.0f), reflectance);
+        Material quadMaterial = new Material(new Vector4f(1.0f, 1.0f, 1.0f, 10.0f), 1f);
         quadMesh.setMaterial(quadMaterial);
         GameItem quad = new GameItem(quadMesh);
         quad.setPosition(0, -1, 0);
-        quad.setScale(2.5f);
+        quad.setScale(9f);
+
+        //add monster
+        MD5Model md5Model = MD5Model.parse("/models/monster.md5mesh");
+        GameItem monster = MD5Loader.process(md5Model, new Vector4f(1, 1, 1, 1));
+        monster.setScale(0.04f);
+        monster.setRotation(90, 0, 0);
 
         //add items to scene
-        this.scene.setGameItems(new GameItem[] { this.item, quad });
+        this.scene.setGameItems(new GameItem[] { monster, quad });
 
         //setup lights
         setupLights();
@@ -142,12 +131,6 @@ public class Game implements IGameLogic {
             if (rotation.x < -90) rotation.x = -90;
             this.hud.setCompassRotation(camera.getRotation().y);
         }
-
-        //update cube rotation
-        float rotY = this.item.getRotation().y;
-        rotY += 0.5f;
-        if (rotY >= 360) rotY -= 360;
-        this.item.getRotation().y = rotY;
 
         //update directional light direction
         this.directionalLightAngle += this.directionalLightAngleInc;

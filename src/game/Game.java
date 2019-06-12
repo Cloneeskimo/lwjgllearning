@@ -1,10 +1,12 @@
 package game;
 
 import engine.*;
+import engine.gameitem.AnimGameItem;
 import engine.gameitem.GameItem;
 import engine.graphics.*;
 import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.SceneLighting;
+import engine.graphics.loaders.md5.MD5AnimModel;
 import engine.graphics.loaders.md5.MD5Loader;
 import engine.graphics.loaders.md5.MD5Model;
 import engine.graphics.loaders.obj.OBJLoader;
@@ -32,7 +34,8 @@ public class Game implements IGameLogic {
     private Scene scene;
     private Hud hud;
     private float directionalLightAngle;
-    private float directionalLightAngleInc;
+    private float directionalLightAngleInc = 0;
+    private AnimGameItem monster;
 
     //Constructor
     public Game() {
@@ -60,8 +63,9 @@ public class Game implements IGameLogic {
 
         //add monster
         MD5Model md5Model = MD5Model.parse("/models/monster.md5mesh");
-        GameItem monster = MD5Loader.process(md5Model, new Vector4f(1, 1, 1, 1));
-        monster.setScale(0.04f);
+        MD5AnimModel md5AnimModel = MD5AnimModel.parse("/models/monster.md5anim");
+        this.monster = MD5Loader.process(md5Model, md5AnimModel, new Vector4f(1, 1, 1, 1));
+        monster.setScale(0.05f);
         monster.setRotation(90, 0, 0);
 
         //add items to scene
@@ -113,6 +117,7 @@ public class Game implements IGameLogic {
         if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) cameraInc.y -= 1;
         if (window.isKeyPressed(GLFW_KEY_LEFT)) this.directionalLightAngleInc -= 1f;
         if (window.isKeyPressed(GLFW_KEY_RIGHT)) this.directionalLightAngleInc += 1f;
+        if (window.isKeyPressed(GLFW_KEY_ENTER)) this.monster.nextFrame();
     }
 
     //Update Method

@@ -29,10 +29,17 @@ public class Utils {
         return file;
     }
 
-    //A method used to convert a list to an array
+    //Methods used to convert a list to an array
     public static float[] listToArray(List<Float> list) {
         int size = list != null ? list.size() : 0;
         float[] a = new float[size];
+        for (int i = 0; i < size; i++) a[i] = list.get(i);
+        return a;
+    }
+
+    public static int[] listToArrayI(List<Integer> list) {
+        int size = list != null ? list.size() : 0;
+        int[] a = new int[size];
         for (int i = 0; i < size; i++) a[i] = list.get(i);
         return a;
     }

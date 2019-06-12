@@ -2,10 +2,12 @@ package engine.graphics;
 
 import engine.IHud;
 import engine.Scene;
+import engine.gameitem.AnimGameItem;
 import engine.gameitem.GameItem;
 import engine.Utils;
 import engine.Window;
 import engine.gameitem.SkyBox;
+import engine.graphics.anim.AnimatedFrame;
 import engine.graphics.light.DirectionalLight;
 import engine.graphics.light.LightPoint;
 import engine.graphics.light.SceneLighting;
@@ -118,6 +120,9 @@ public class Renderer {
         this.sceneShaderProgram.createUniform("shadowMap");
         this.sceneShaderProgram.createUniform("orthoProjectionMatrix");
         this.sceneShaderProgram.createUniform("modelLightViewMatrix");
+
+        //create joint matrices uniform
+        this.sceneShaderProgram.createUniform("jointsMatrix");
     }
 
     //HUD Shader Setup Method
@@ -262,9 +267,19 @@ public class Renderer {
             //enable shadow map texture
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, this.shadowMap.getDepthMap().getID());
-            m.renderList(meshMap.get(m), (GameItem gi) -> {
-                this.sceneShaderProgram.setUniform("modelView", this.transformation.updateModelViewMatrix(gi, viewMatrix));
-                this.sceneShaderProgram.setUniform("modelLightViewMatrix", this.transformation.updateModelLightViewMatrix(gi, lightViewMatrix));
+            m.renderList(meshMap.get(m), (GameItem item) -> {
+
+                //set model view and light model view matrices
+                this.sceneShaderProgram.setUniform("modelView", this.transformation.updateModelViewMatrix(item, viewMatrix));
+                this.sceneShaderProgram.setUniform("modelLightViewMatrix", this.transformation.updateModelLightViewMatrix(item, lightViewMatrix));
+
+                //set animation info
+                if (item instanceof AnimGameItem) {
+                    AnimGameItem aitem = (AnimGameItem)item;
+                    AnimatedFrame frame = aitem.getCurrentFrame();
+                    this.sceneShaderProgram.setUniform("jointsMatrix", frame.getJointMatrices());
+                }
+
             });
         }
 

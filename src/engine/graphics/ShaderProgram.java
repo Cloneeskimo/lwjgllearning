@@ -139,6 +139,15 @@ public class ShaderProgram {
         }
     }
 
+    public void setUniform(String uniformName, Matrix4f[] value) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            int length = value != null ? value.length : 0;
+            FloatBuffer fb = stack.mallocFloat(16 * length);
+            for (int i = 0; i < length; i++) value[i].get(16 * i, fb);
+            glUniformMatrix4fv(uniforms.get(uniformName), false, fb);
+        }
+    }
+
     public void setUniform(String uniformName, Material value) {
         setUniform(uniformName + ".ambient", value.getAmbientColor());
         setUniform(uniformName + ".diffuse", value.getDiffuseColor());
@@ -158,7 +167,6 @@ public class ShaderProgram {
         setUniform(uniformName + ".attenuation.exponent", attenuation.getExponent());
     }
 
-    //REQUIREMENT: ARRAY MUST BE FULL OR EMPTY - NO NULL MEMBERS
     public void setUniform(String uniformName, LightPoint[] value) {
         int count = value != null ? value.length : 0;
         for (int i = 0; i < count; i++) setUniform(uniformName + "[" + i + "]", value);
@@ -170,7 +178,6 @@ public class ShaderProgram {
         setUniform(uniformName + ".cutoff", value.getCutOff());
     }
 
-    //REQUIREMENT: ARRAY MUST BE FULL OR EMPTY - NO NULL MEMBERS
     public void setUniform(String uniformName, SpotLight[] value) {
         int count = value != null ? value.length : 0;
         for (int i = 0; i < count; i++) setUniform(uniformName + "[" + i + "]", value);

@@ -30,21 +30,31 @@ uniform mat4 jointsMatrix[MAX_JOINTS];
 //Main Function
 void main()
 {
-    //calculate position base on weights
+    //calculate position and normal based on weights
     vec4 initPos = vec4(0, 0, 0, 0);
+    vec4 initNormal = vec4(0, 0, 0, 0);
     int count = 0;
     for (int i = 0; i < MAX_WEIGHTS; i++) {
         float weight = jointWeights[i];
         if (weight > 0) {
             count++;
             int jointIndex = jointIndices[i];
+
+            //alter position
             vec4 tmpPos = jointsMatrix[jointIndex] * vec4(position, 1.0);
             initPos += weight * tmpPos;
+
+            //alter normal
+            vec4 tmpNormal = jointsMatrix[jointIndex] * vec4(vertexNormal, 0.0);
+            initNormal += weight * tmpNormal;
         }
     }
 
     //if no weights, just use passed in position
-    if (count == 0) initPos = vec4(position, 1.0);
+    if (count == 0) {
+        initPos = vec4(position, 1.0);
+        initNormal = vec4(vertexNormal, 0.0);
+    }
 
     //set model view position and final gl position
     vec4 mvPos = modelView * initPos;
@@ -55,7 +65,7 @@ void main()
 
     //normals - we convert the normal vector to model view, but we first set w to 0 because we are not interested
     //in its translation, only its rotation and scale. setting w to 0 prevents the translation from occuring
-    mvVertexNormal = normalize(modelView * vec4(vertexNormal, 0.0)).xyz; //convert normal to modelview space
+    mvVertexNormal = normalize(modelView * initNormal).xyz; //convert normal to modelview space
     mvVertexPos = mvPos.xyz; //pass through vertex position for lighting calculations
 
     //orthographically project light view for shadow calculations

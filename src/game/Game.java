@@ -151,7 +151,6 @@ public class Game implements IGameLogic {
         float angle = (float)Math.toDegrees(Math.acos(lightDir.z));
 
         //update text
-        Vector3f cameraPos = this.camera.getPosition();
         this.hud.setStatusText("FPS: " + GameEngine.CURRENT_FPS + " LIGHT ANGLE: " + angle);
     }
 

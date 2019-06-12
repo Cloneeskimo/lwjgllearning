@@ -74,6 +74,9 @@ public class Renderer {
         //create uniforms
         this.depthShaderProgram.createUniform("orthoProjectionMatrix");
         this.depthShaderProgram.createUniform("modelLightViewMatrix");
+
+        //create uniform for joint matrices (for animations)
+        this.depthShaderProgram.createUniform("jointsMatrix");
     }
 
     //SkyBox Shader Setup Method
@@ -197,6 +200,13 @@ public class Renderer {
             mesh.renderList(meshes.get(mesh), (GameItem item) -> {
                 Matrix4f modelLightViewMatrix = transformation.updateModelViewMatrix(item, lightViewMatrix);
                 depthShaderProgram.setUniform("modelLightViewMatrix", modelLightViewMatrix);
+
+                //handle animation
+                if (item instanceof AnimGameItem) {
+                    AnimGameItem aitem = (AnimGameItem)item;
+                    AnimatedFrame frame = aitem.getCurrentFrame();
+                    depthShaderProgram.setUniform("jointsMatrix", frame.getJointMatrices());
+                }
             });
         }
 
